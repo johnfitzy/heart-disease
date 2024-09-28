@@ -42,18 +42,18 @@ begin
 	column_names = [
     	"age", 
     	"sex", 
-    	"chest-pain", 
-    	"rest-bp", 
-    	"serum-chol", 
-	    "fasting-blood-sugar", 
+    	"chest_pain", 
+    	"rest_bp", 
+    	"serum_chol", 
+	    "fasting_blood_sugar", 
 		"electrocardiographic", 
-	 	"max-heart-rate", 
+	 	"max_heart_rate", 
    	 	"angina", 
     	"oldpeak", 
     	"slope", 
-    	"major-vessels", 
+    	"major_vessels", 
     	"thal", 
-    	"heart-disease"
+    	"heart_disease"
 	]
 
 	# Open file as CSV
@@ -70,6 +70,132 @@ describe(df)
 # ╔═╡ ee304698-10b8-4a62-9cb5-190fcf5ec3c0
 # Convert to Matrix and transpose so it is in Julia form.
 # X = transpose(Matrix(df))
+
+# ╔═╡ d5138acc-cdbf-4a56-8a20-86442732b70b
+begin
+
+	function create_qqplot(data::Vector{<:Number}, plot_title::String)
+		qqplot(
+			data, 
+			# Create a QQ plot comparing data to a normal distribution
+        	Normal(mean(data), std(data)),
+        	title=plot_title, 
+        	xlabel="Theoretical Quantiles", 
+        	ylabel="Sample Quantiles")
+		end
+end
+
+# ╔═╡ 2863d3e2-02e3-4340-bd72-5ff50189e6b2
+begin
+	
+	function create_combined_plot(
+		data::Vector{<:Number}, 
+		title_text::String, 
+		x_label::String, 
+		y_label::String)
+		
+    # Create the violin plot
+    violin([data], 
+           legend=false, 
+           xticks=:none)  # Removes x-axis values
+
+    # Overlay the dot plot
+    dotplot!(data, 
+             legend=false, 
+             xticks=:none)  # Removes x-axis values
+
+    # Overlay the box plot
+    boxplot!(data, 
+             legend=false, 
+             xticks=:none)  # Removes x-axis values
+
+    # Set the title and axis labels
+    title!(title_text)
+    xaxis!(x_label)
+    yaxis!(y_label)
+	end
+end
+
+# ╔═╡ 9d7907a0-8f62-4403-bb23-8d189c84d46c
+begin
+	
+	function create_hist_density_plot(
+		data::Vector{<:Number}, 
+		hist_title::String, 
+		density_title::String, 
+		hist_xlabel::String, 
+		hist_ylabel::String, 
+		density_xlabel::String, 
+		density_ylabel::String
+	)
+
+		
+    	# Create a plot layout with 1 row and 2 columns
+    	plt = plot(layout=(1, 2), size=(800, 400))
+
+    	# Add a histogram to the first subplot
+	    histogram!(plt[1, 1], data, 
+        	title=hist_title, 
+            xlabel=hist_xlabel, 
+            ylabel=hist_ylabel, 
+            bins=10, 
+            legend=false)
+
+    	# Add a density plot to the second subplot
+    	density!(plt[1, 2], data, 
+        	title=density_title, 
+        	xlabel=density_xlabel, 
+            ylabel=density_ylabel, 
+            legend=false)
+
+    	# Return the combined layout with the two subplots
+    	return plt
+	end
+end
+
+# ╔═╡ 63f722e1-2daf-4a7f-a360-c14389ea2bd4
+begin
+	# Define the reusable function for creating a bar chart with percentages
+	function create_percentage_bar_plot(
+		data::Vector{<:Number}, 
+		title_text::String, 
+		xlabel_text::String, 
+		ylabel_text::String, 
+		labels::Vector{String}
+	)
+    
+		# Step 1: Count occurrences of each unique value in the data
+    	value_counts = countmap(data)
+
+    	# Extract counts for the first two unique values (assumed binary: 0 and 1 or 	similar)
+    	first_count = get(value_counts, 1.0, 0)
+    	second_count = get(value_counts, 0.0, 0)
+
+	    # Calculate total for percentages
+    	total = first_count + second_count
+
+    	# Calculate percentages
+    	first_percentage = 100 * first_count / total
+    	second_percentage = 100 * second_count / total
+
+    	# Prepare percentages and custom labels with values included
+    	percentages = [first_percentage, second_percentage]
+    	custom_labels = [
+        	"$(labels[1]) $(round(first_percentage, digits=1))%", 
+	        "$(labels[2]) $(round(second_percentage, digits=1))%"
+    	]
+
+    	# Plotting the Bar Chart with calculated percentages and custom labels
+    	bar(labels, 
+        	percentages, 
+        	title=title_text, 
+        	xlabel=xlabel_text, 
+        	ylabel=ylabel_text, 
+        	label=custom_labels,
+        	legend=:topright,  # Position the legend to the top right of the graph
+        	yticks=0:10:100)
+		end
+end
 
 # ╔═╡ e804fdc5-cca9-4912-8c51-d39accde1d3f
 md"""
@@ -99,35 +225,11 @@ md"""
 
 # ╔═╡ e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
 begin
-
-	sex_counts = countmap(df.sex)
-
-	# Extract counts
-	male_count = get(sex_counts, 1.0, 0)
-	female_count = get(sex_counts, 0.0, 0)
-
-	# Calculate total for percentages
-	total = male_count + female_count
-
-	# Calculate percentages
-	male_percentage = 100 * male_count / total
-	female_percentage = 100 * female_count / total
-
-	# Prepare labels and values for the bar chart
-	labels = ["Male", "Female"]
-	percentages = [male_percentage, female_percentage]
-
-	# Plotting the Bar Chart with a Legend Showing Percentages
-	bar(labels, 
-		percentages, 
-    	title="Sex Distribution (Percentage)", 
-    	xlabel="Sex", 
-    	ylabel="Percentage (%)", 
-    	label=["Male $(round(male_percentage, digits=1))%" 
-           "Female $(round(female_percentage, digits=1))%"],
-    	legend=:topright,  # Position the legend to the top right of the graph
-    	yticks=0:10:100
-	)
+	create_percentage_bar_plot(df.sex, 
+                           "Sex Distribution (Percentage)", 
+                           "Sex", 
+                           "Percentage (%)", 
+                           ["Male", "Female"])
 end
 
 # ╔═╡ 69956da7-2ec9-446f-b820-9918cb7f7a2a
@@ -140,71 +242,337 @@ describe(df.age)
 
 # ╔═╡ 004da6e2-b821-4096-b2e9-5f2ab5dc079e
 begin
-
-	# Step 1: Create a plot layout with 1 row and 2 columns
-	plt = plot(layout=(1, 2), size=(800, 400))
-
-	# Step 2: Add a histogram to the first subplot
-	histogram!(plt[1, 1], df.age, 
-           title="Age Distribution", 
-           xlabel="Age", 
-           ylabel="Frequency", 
-           bins=10, 
-           legend=false)
-
-	# Step 3: Add a density plot to the second subplot
-	density!(plt[1, 2], df.age, 
-    	title="Density Plot of Age", 
-    	xlabel="Age", 
-        ylabel="Density", 
-        legend=false)
-
-	# Display the combined layout with the two subplots
-	plt
+	create_hist_density_plot(df.age, 
+    	"Age Distribution", 
+        "Density Plot of Age", 
+        "Age", 
+    	"Frequency", 
+        "Age", 
+        "Density"
+	)
 end
 
 # ╔═╡ d374d9b1-dcad-44a2-9020-ddeb669e435c
 begin
-	
-	# Create a violin plot of Age
-	violin([df.age], 
-    	title="Violin Plot of Age", 
-    	ylabel="Density", 
-    	legend=false, 
-    	xticks=:none) #Removes x-axis values
-
-	# Overlay a dot plot on the same graph
-	dotplot!(df.age, 
-    	title="Box Plot of Age", 
-        ylabel="Age", 
-        legend=false, 
-        xticks=:none)  # Removes x-axis values
-
-	# Overlay a box plot on the same graph
-	boxplot!(df.age, 
-    	title="Box Plot of Age", 
-        ylabel="Age", 
-        legend=false, 
-        xticks=:none)  # Removes x-axis values
-
-	xaxis!("Frequency")  
-	yaxis!("Age")
+	# Plot violin dot and box plot for age
+	create_combined_plot(df.age, "Age Violin, Dot and Box Plot", "Frequency", "Age")
 
 end
 
 # ╔═╡ 90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
 begin
-	qqplot(df.age, 
-    	Normal(mean(df.age), std(df.age)), 
-    	title="QQ Plot of Age", 
-       	xlabel="Theoretical Quantiles", 
-       	ylabel="Sample Quantiles")
+	# Plot QQ Plot to inspect distribution agains normal distribution
+	create_qqplot(df.age, "QQ Plot of Age")
 end
 
 # ╔═╡ 95398b93-4809-4339-afa8-d653dd1b52db
 md"""
-## Feature Analysis: Age
+## Feature Analysis: Chest Pain
 """
+
+# ╔═╡ 126128d5-8690-4cf0-abab-0a58229ef111
+begin
+	
+	chest_pain_counts = countmap(df.chest_pain)
+
+	labels_cp = ["Typical Angina", 
+		"Atypical Angina", 
+		"Non-Anginal Pain", 
+		"Asymptomatic"]
+
+	values = [get(chest_pain_counts, 1, 0), 
+          get(chest_pain_counts, 2, 0), 
+          get(chest_pain_counts, 3, 0), 
+          get(chest_pain_counts, 4, 0)]
+
+	bar(labels_cp, values, 
+    	title="Chest Pain Distribution", 
+    	xlabel="Chest Pain Type", 
+    	ylabel="Count", 
+    	legend=false, 
+    	bar_width=0.6, 
+    	color=:blue) 
+
+end
+
+# ╔═╡ 16748bd6-6f85-48cf-8043-c3ab2c8abbb9
+md"""
+## Feature Analysis: Resting Blood Presure	
+"""
+
+# ╔═╡ ffe1d39f-37b7-440e-befd-b31cc696fee3
+describe(df.rest_bp	)
+
+# ╔═╡ face61a1-a2d3-4700-a886-184cfb19700a
+begin
+
+	create_hist_density_plot(df.rest_bp, 
+		"Blood Pressure Distribution",  # Title for the histogram
+        "Density Plot of Blood Pressure",  # Title for the density plot
+        "Blood Pressure",  # X-axis label for the histogram
+    	"Frequency",       # Y-axis label for the histogram
+        "Blood Pressure",  # X-axis label for the density plot
+        "Density")         # Y-axis label for the density plot
+
+end
+
+# ╔═╡ fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
+begin
+
+	create_combined_plot(df.rest_bp, 
+		"Resting Blood Presure Violin, Dot and Box Plot", 
+		"Frequency", 
+		"Blood Presure")
+
+end
+
+# ╔═╡ 718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
+begin
+	# QQ Plot to inspect distribution agains normal distribution
+	create_qqplot(df.rest_bp, "QQ Plot of Resting Blood Pressure")
+end
+
+# ╔═╡ 17fe2f69-2610-431f-af05-434e5ec1e6ef
+md"""
+## Feature Analysis: Serum Cholesterol
+"""
+
+# ╔═╡ 7d50fa1c-77b2-4a48-b825-1c3664684f42
+describe(df.serum_chol)
+
+# ╔═╡ 9113278a-604c-44fc-a51a-610c4ce37064
+	create_hist_density_plot(df.serum_chol, 
+    	"Serum Cholesterol Distribution", 
+        "Density Plot of Serum Cholesterol", 
+        "cholesterol", 
+    	"Frequency", 
+        "Serum Cholesterol", 
+        "Density"
+	)
+
+# ╔═╡ aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
+begin
+
+	create_combined_plot(df.serum_chol, 
+		"Serum Cholesterol Violin, Dot and Box Plot", 
+		"Frequency", 
+		"Serum Cholesterol")
+
+end
+
+# ╔═╡ f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
+	# QQ Plot to inspect distribution agains normal distribution
+	create_qqplot(df.serum_chol, "QQ Plot of Serum Cholesterol")
+
+# ╔═╡ d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
+md"""
+## Feature Analysis: Fasting Blood Sugar > 120 mg/dL 
+"""
+
+# ╔═╡ 84a429d3-653b-4572-8458-b534dd415899
+begin
+	# Function call to create a percentage bar plot for df.fasting_blood_sugar
+	create_percentage_bar_plot(df.fasting_blood_sugar, 
+		"Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
+        "Fasting Blood Sugar",  # X-axis label
+        "Percentage (%)",       # Y-axis label
+        ["Elevated", "Normal"]
+	) # Labels for the binary categories
+
+end
+
+# ╔═╡ c84c8d42-152d-4e6e-bf06-099774678e50
+md"""
+## Feature Analysis: Resting Electrocardiographic
+"""
+
+# ╔═╡ 28b97da7-eea2-4199-b063-acf8bdca7d08
+begin
+	# Count occurrences of each electrocardiographic type
+	electrocardiographic_counts = countmap(df.electrocardiographic)
+
+	# Define labels for each electrocardiographic type
+	labels_ecg = ["Normal", 
+    	"ST-T Wave Abnormality", 
+        "Left Ventricular Hypertrophy"]
+
+	# Extract counts for each category (0, 1, 2)
+	values_ecg = [get(electrocardiographic_counts, 0, 0), 
+    	get(electrocardiographic_counts, 1, 0), 
+        get(electrocardiographic_counts, 2, 0)]
+
+	# Plotting the Bar Chart for Electrocardiographic Results
+	bar(labels_ecg, values_ecg, 
+    	title="Resting Electrocardiographic Results Distribution", 
+    	xlabel="Electrocardiographic Type", 
+    	ylabel="Count", 
+    	legend=false, 
+    	bar_width=0.6, 
+    	color=:blue)
+end
+
+# ╔═╡ 32fe8106-97ed-4a48-8980-e221a0ea79fb
+md"""
+## Feature Analysis: Angina with exercise (exang)
+"""
+
+# ╔═╡ 26dde9f9-ad73-454c-b475-dfc09894f400
+begin
+	# Function call to create a percentage bar plot for df.angina
+	create_percentage_bar_plot(df.angina, 
+    	"Angina with Exercise Distribution (Percentage)",  # Title of the plot
+        "Angina with Exercise",  # X-axis label
+        "Percentage (%)",        # Y-axis label
+        ["Yes", "No"])           # Labels for the categories 1 (yes) and 0 (no)
+end
+
+# ╔═╡ 53503b2d-e4c7-4570-8262-20e8ffb50156
+md"""
+## Feature Analysis: Max Heart Rate
+"""
+
+# ╔═╡ aa772ca5-cedd-4805-add7-0404048b6e2e
+describe(df.max_heart_rate)
+
+# ╔═╡ 7eb478b5-6103-44af-bd28-48e5f2fd9080
+# Histogram and Density Plot for max_heart_rate
+create_hist_density_plot(df.max_heart_rate, 
+                         "Max Heart Rate Distribution", 
+                         "Density Plot of Max Heart Rate", 
+                         "Max Heart Rate", 
+                         "Frequency", 
+                         "Max Heart Rate", 
+                         "Density")
+
+
+# ╔═╡ 26f71e4e-34df-44a6-89e3-e2e40db03cf7
+# Combined Violin, Dot, and Box Plot for max_heart_rate
+create_combined_plot(df.max_heart_rate, 
+                     "Max Heart Rate Violin, Dot, and Box Plot", 
+                     "Frequency", 
+                     "Max Heart Rate")
+
+# ╔═╡ bc4edeec-229e-48e5-b29a-a6bafb8040c2
+# QQ Plot for max_heart_rate
+create_qqplot(df.max_heart_rate, "QQ Plot of Max Heart Rate")
+
+# ╔═╡ 579c4514-ae8e-4321-9aef-6977f2dacba2
+md"""
+## Feature Analysis: Oldpeak
+"""
+
+# ╔═╡ 80f1f0c8-d4b8-4d49-a532-d73a477046c7
+describe(df.oldpeak)
+
+# ╔═╡ a4701191-219f-4c3f-97f4-8dc4b35dd410
+# Histogram and Density Plot for oldpeak
+create_hist_density_plot(df.oldpeak, 
+                         "Oldpeak Distribution", 
+                         "Density Plot of Oldpeak", 
+                         "Oldpeak", 
+                         "Frequency", 
+                         "Oldpeak", 
+                         "Density")
+
+# ╔═╡ a407201e-5260-49ea-b48f-376b1714169b
+# Combined Violin, Dot, and Box Plot for oldpeak
+create_combined_plot(df.oldpeak, 
+                     "Oldpeak Violin, Dot, and Box Plot", 
+                     "Frequency", 
+                     "Oldpeak")
+
+# ╔═╡ 67400cd2-9892-4502-a5de-19fdecd9598a
+# QQ Plot for oldpeak
+create_qqplot(df.oldpeak, "QQ Plot of Oldpeak")
+
+# ╔═╡ 027d26f8-5177-4be1-b333-a7810792c6e7
+md"""
+## Feature Analysis: Slope
+"""
+
+# ╔═╡ 075f240e-29ab-45c3-ad3f-5b49aeeac68b
+begin
+
+	# Count occurrences of each slope type
+	slope_counts = countmap(df.slope)
+
+	# Define labels for each slope type
+	labels_slope = ["Upsloping", 
+    	"Flat", 
+        "Downsloping"]
+
+	# Extract counts for each category (1, 2, 3)
+	values_slope = [get(slope_counts, 1, 0), 
+    	get(slope_counts, 2, 0), 
+        get(slope_counts, 3, 0)]
+
+	# Plotting the Bar Chart for Slope of Peak Exercise ST Segment
+	bar(labels_slope, values_slope, 
+    	title="Slope of Peak Exercise ST Segment Distribution", 
+    	xlabel="Slope Type", 
+    	ylabel="Count", 
+    	legend=false, 
+    	bar_width=0.6, 
+    	color=:blue)
+end
+
+# ╔═╡ 064e0ac4-7458-4a19-8e12-0395eb92a654
+md"""
+## Feature Analysis: Major Vessels
+"""
+
+# ╔═╡ c5056e29-9545-4a94-bc65-6d9fd562424e
+describe(df.major_vessels)
+
+# ╔═╡ 6cf11a9a-a837-457d-8649-afbdf8926304
+# Histogram and Density Plot for major_vessels
+create_hist_density_plot(df.major_vessels, 
+                         "Major Vessels Distribution", 
+                         "Density Plot of Major Vessels", 
+                         "Major Vessels", 
+                         "Frequency", 
+                         "Major Vessels", 
+                         "Density")
+
+# ╔═╡ 34809859-74e2-410b-b623-6212def3cc53
+# Combined Violin, Dot, and Box Plot for major_vessels
+create_combined_plot(df.major_vessels, 
+                     "Major Vessels Violin, Dot, and Box Plot", 
+                     "Frequency", 
+                     "Major Vessels")
+
+# ╔═╡ 591b6955-22d5-4b30-9cc6-c2fa57adbc92
+# QQ Plot for major_vessels
+create_qqplot(df.major_vessels, "QQ Plot of Major Vessels")
+
+# ╔═╡ ea52f75b-8893-41c1-b53b-0b706dc1f56a
+md"""
+## Feature Analysis: Thal
+"""
+
+# ╔═╡ a647e7b8-1c3a-4402-9852-eeb1d5506e60
+describe(df.thal)
+
+# ╔═╡ 98da02c7-9ed8-422b-9180-5e478768a543
+# Histogram and Density Plot for thal
+create_hist_density_plot(df.thal, 
+                         "Thal Distribution", 
+                         "Density Plot of Thal", 
+                         "Thal", 
+                         "Frequency", 
+                         "Thal", 
+                         "Density")
+
+# ╔═╡ 11f7495e-6f26-45bd-9cd8-6a914fbcf542
+# Combined Violin, Dot, and Box Plot for thal
+create_combined_plot(df.thal, 
+                     "Thal Violin, Dot, and Box Plot", 
+                     "Frequency", 
+                     "Thal")
+
+# ╔═╡ b70208cf-2a42-4ddd-bf25-abcec62a6376
+# QQ Plot for thal
+create_qqplot(df.thal, "QQ Plot of Thal")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1734,15 +2102,58 @@ version = "1.4.1+1"
 # ╠═a174259c-5822-4aa1-b162-d07deef886af
 # ╠═d6c8603b-569f-4c02-a3fb-3d0e74bbf638
 # ╠═ee304698-10b8-4a62-9cb5-190fcf5ec3c0
+# ╠═d5138acc-cdbf-4a56-8a20-86442732b70b
+# ╠═2863d3e2-02e3-4340-bd72-5ff50189e6b2
+# ╠═9d7907a0-8f62-4403-bb23-8d189c84d46c
+# ╠═63f722e1-2daf-4a7f-a360-c14389ea2bd4
 # ╟─e804fdc5-cca9-4912-8c51-d39accde1d3f
 # ╟─35fa6501-bd25-44ef-baca-f5bf27d55820
 # ╟─f834790d-2ff3-42a7-9570-2bdf8526d0d4
-# ╟─e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
-# ╠═69956da7-2ec9-446f-b820-9918cb7f7a2a
+# ╠═e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
+# ╟─69956da7-2ec9-446f-b820-9918cb7f7a2a
 # ╠═ea135519-5c1c-4133-96af-4217ce2e8125
-# ╟─004da6e2-b821-4096-b2e9-5f2ab5dc079e
-# ╟─d374d9b1-dcad-44a2-9020-ddeb669e435c
-# ╟─90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
-# ╠═95398b93-4809-4339-afa8-d653dd1b52db
+# ╠═004da6e2-b821-4096-b2e9-5f2ab5dc079e
+# ╠═d374d9b1-dcad-44a2-9020-ddeb669e435c
+# ╠═90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
+# ╟─95398b93-4809-4339-afa8-d653dd1b52db
+# ╠═126128d5-8690-4cf0-abab-0a58229ef111
+# ╟─16748bd6-6f85-48cf-8043-c3ab2c8abbb9
+# ╠═ffe1d39f-37b7-440e-befd-b31cc696fee3
+# ╟─face61a1-a2d3-4700-a886-184cfb19700a
+# ╟─fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
+# ╠═718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
+# ╟─17fe2f69-2610-431f-af05-434e5ec1e6ef
+# ╠═7d50fa1c-77b2-4a48-b825-1c3664684f42
+# ╠═9113278a-604c-44fc-a51a-610c4ce37064
+# ╠═aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
+# ╠═f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
+# ╟─d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
+# ╠═84a429d3-653b-4572-8458-b534dd415899
+# ╟─c84c8d42-152d-4e6e-bf06-099774678e50
+# ╠═28b97da7-eea2-4199-b063-acf8bdca7d08
+# ╟─32fe8106-97ed-4a48-8980-e221a0ea79fb
+# ╟─26dde9f9-ad73-454c-b475-dfc09894f400
+# ╟─53503b2d-e4c7-4570-8262-20e8ffb50156
+# ╠═aa772ca5-cedd-4805-add7-0404048b6e2e
+# ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
+# ╠═26f71e4e-34df-44a6-89e3-e2e40db03cf7
+# ╠═bc4edeec-229e-48e5-b29a-a6bafb8040c2
+# ╠═579c4514-ae8e-4321-9aef-6977f2dacba2
+# ╠═80f1f0c8-d4b8-4d49-a532-d73a477046c7
+# ╠═a4701191-219f-4c3f-97f4-8dc4b35dd410
+# ╟─a407201e-5260-49ea-b48f-376b1714169b
+# ╠═67400cd2-9892-4502-a5de-19fdecd9598a
+# ╟─027d26f8-5177-4be1-b333-a7810792c6e7
+# ╟─075f240e-29ab-45c3-ad3f-5b49aeeac68b
+# ╟─064e0ac4-7458-4a19-8e12-0395eb92a654
+# ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
+# ╟─6cf11a9a-a837-457d-8649-afbdf8926304
+# ╟─34809859-74e2-410b-b623-6212def3cc53
+# ╠═591b6955-22d5-4b30-9cc6-c2fa57adbc92
+# ╟─ea52f75b-8893-41c1-b53b-0b706dc1f56a
+# ╠═a647e7b8-1c3a-4402-9852-eeb1d5506e60
+# ╠═98da02c7-9ed8-422b-9180-5e478768a543
+# ╟─11f7495e-6f26-45bd-9cd8-6a914fbcf542
+# ╠═b70208cf-2a42-4ddd-bf25-abcec62a6376
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
