@@ -7,6 +7,9 @@ using InteractiveUtils
 # ╔═╡ 92a554a2-ff53-477b-8ccf-4a178ee01672
 using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
 
+# ╔═╡ f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
+include("src/plotting_functions.jl")
+
 # ╔═╡ 001f6d24-7d1d-11ef-39a9-cb99a87ca3bd
 md"""
 # TODO:
@@ -66,137 +69,6 @@ end
 
 # ╔═╡ d6c8603b-569f-4c02-a3fb-3d0e74bbf638
 describe(df)
-
-# ╔═╡ ee304698-10b8-4a62-9cb5-190fcf5ec3c0
-# Convert to Matrix and transpose so it is in Julia form.
-# X = transpose(Matrix(df))
-
-# ╔═╡ d5138acc-cdbf-4a56-8a20-86442732b70b
-begin
-
-	function create_qqplot(data::Vector{<:Number}, plot_title::String)
-		qqplot(
-			data, 
-			# Create a QQ plot comparing data to a normal distribution
-        	Normal(mean(data), std(data)),
-        	title=plot_title, 
-        	xlabel="Theoretical Quantiles", 
-        	ylabel="Sample Quantiles")
-		end
-end
-
-# ╔═╡ 2863d3e2-02e3-4340-bd72-5ff50189e6b2
-begin
-	
-	function create_combined_plot(
-		data::Vector{<:Number}, 
-		title_text::String, 
-		x_label::String, 
-		y_label::String)
-		
-    # Create the violin plot
-    violin([data], 
-           legend=false, 
-           xticks=:none)  # Removes x-axis values
-
-    # Overlay the dot plot
-    dotplot!(data, 
-             legend=false, 
-             xticks=:none)  # Removes x-axis values
-
-    # Overlay the box plot
-    boxplot!(data, 
-             legend=false, 
-             xticks=:none)  # Removes x-axis values
-
-    # Set the title and axis labels
-    title!(title_text)
-    xaxis!(x_label)
-    yaxis!(y_label)
-	end
-end
-
-# ╔═╡ 9d7907a0-8f62-4403-bb23-8d189c84d46c
-begin
-	
-	function create_hist_density_plot(
-		data::Vector{<:Number}, 
-		hist_title::String, 
-		density_title::String, 
-		hist_xlabel::String, 
-		hist_ylabel::String, 
-		density_xlabel::String, 
-		density_ylabel::String,
-		bins::Int = 10
-	)
-
-		
-    	# Create a plot layout with 1 row and 2 columns
-    	plt = plot(layout=(1, 2), size=(800, 400))
-
-    	# Add a histogram to the first subplot
-	    histogram!(plt[1, 1], data, 
-        	title=hist_title, 
-            xlabel=hist_xlabel, 
-            ylabel=hist_ylabel, 
-            bins=bins, 
-            legend=false)
-
-    	# Add a density plot to the second subplot
-    	density!(plt[1, 2], data, 
-        	title=density_title, 
-        	xlabel=density_xlabel, 
-            ylabel=density_ylabel, 
-            legend=false)
-
-    	# Return the combined layout with the two subplots
-    	return plt
-	end
-end
-
-# ╔═╡ 63f722e1-2daf-4a7f-a360-c14389ea2bd4
-begin
-	# Define the reusable function for creating a bar chart with percentages
-	function create_percentage_bar_plot(
-		data::Vector{<:Number}, 
-		title_text::String, 
-		xlabel_text::String, 
-		ylabel_text::String, 
-		labels::Vector{String}
-	)
-    
-		# Step 1: Count occurrences of each unique value in the data
-    	value_counts = countmap(data)
-
-    	# Extract counts for the first two unique values (assumed binary: 0 and 1 or 	similar)
-    	first_count = get(value_counts, 1.0, 0)
-    	second_count = get(value_counts, 0.0, 0)
-
-	    # Calculate total for percentages
-    	total = first_count + second_count
-
-    	# Calculate percentages
-    	first_percentage = 100 * first_count / total
-    	second_percentage = 100 * second_count / total
-
-    	# Prepare percentages and custom labels with values included
-    	percentages = [first_percentage, second_percentage]
-    	custom_labels = [
-        	"$(labels[1]) $(round(first_percentage, digits=1))%", 
-	        "$(labels[2]) $(round(second_percentage, digits=1))%"
-    	]
-
-    	# Plotting the Bar Chart with calculated percentages and custom labels
-    	bar(labels, 
-        	percentages, 
-        	title=title_text, 
-        	xlabel=xlabel_text, 
-        	ylabel=ylabel_text, 
-        	label=custom_labels,
-        	legend=:topright,  # Position the legend to the top right of the graph
-        	yticks=0:10:100)
-		end
-end
 
 # ╔═╡ e804fdc5-cca9-4912-8c51-d39accde1d3f
 md"""
@@ -425,6 +297,18 @@ begin
     	color=:blue)
 end
 
+# ╔═╡ 6760f6ec-0f99-4ef6-9752-3bcb46150955
+begin
+	create_bar_plot(
+    	data=df.electrocardiographic, 
+    	labels=["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"], 
+    	values_to_extract=[0, 1, 2], 
+    	plot_title="Resting Electrocardiographic Results Distribution", 
+    	xlabel_text="Electrocardiographic Type", 
+    	ylabel_text="Count"
+	)
+end
+
 # ╔═╡ 653c7c1e-424a-4d88-972d-a161a8654a33
 begin
 	#TODO; make this on the bar graph!!!
@@ -445,7 +329,7 @@ md"""
 # ╔═╡ 26dde9f9-ad73-454c-b475-dfc09894f400
 begin
 	# Function call to create a percentage bar plot for df.angina
-	create_percentage_bar_plot(df.angina, 
+	create_binary_bar_plot(df.angina, 
     	"Angina with Exercise Distribution (Percentage)",  # Title of the plot
         "Angina with Exercise",  # X-axis label
         "Percentage (%)",        # Y-axis label
@@ -520,45 +404,17 @@ md"""
 ## Feature Analysis: Slope
 """
 
-# ╔═╡ 075f240e-29ab-45c3-ad3f-5b49aeeac68b
+# ╔═╡ 4d50430f-1fa0-4eee-8cf1-ef81e56f7402
 begin
-
-	# Count occurrences of each slope type
-	slope_counts = countmap(df.slope)
-
-	# Define labels for each slope type
-	labels_slope = ["Upsloping", 
-    	"Flat", 
-        "Downsloping"]
-
-	# Extract counts for each category (1, 2, 3)
-	values_slope = [get(slope_counts, 1, 0), 
-    	get(slope_counts, 2, 0), 
-        get(slope_counts, 3, 0)]
-
-	# Plotting the Bar Chart for Slope of Peak Exercise ST Segment
-	bar(labels_slope, values_slope, 
-    	title="Slope of Peak Exercise ST Segment Distribution", 
-    	xlabel="Slope Type", 
-    	ylabel="Count", 
-    	legend=false, 
-    	bar_width=0.6, 
-    	color=:blue)
+	create_bar_plot(
+    	data=df.slope, 
+    	labels=["Upsloping", "Flat", "Downsloping"], 
+    	values_to_extract=[1, 2, 3], 
+    	plot_title="Slope of Peak Exercise ST Segment Distribution", 
+    	xlabel_text="Slope Type", 
+    	ylabel_text="Count"
+	)
 end
-
-# ╔═╡ acec42eb-1d27-479a-a8e2-06a0c5b8a698
-begin
-
-#TODO; make this on the bar graph!!!
-	total_count_slope = sum(values_slope)
-
-	# Calculate percentages
-	percentages_slope = [100 * value / total_count_slope for value in values_slope]
-
-	# Create custom labels for the legend with percentages
-	legend_labels_slope = ["$(labels_slope[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_slope)]
-end
-
 
 # ╔═╡ 064e0ac4-7458-4a19-8e12-0395eb92a654
 md"""
@@ -602,40 +458,14 @@ md"""
 
 # ╔═╡ b908bc5c-c63d-4f00-9471-28eb51cc59fa
 begin
-	# Count occurrences of each thal type
-	thal_counts = countmap(df.thal)
-
-	# Define labels for each thal type
-	labels_thal = ["Normal", 
-               "Fixed Defect", 
-               "Reversible Defect"]
-
-	# Extract counts for each category (3, 6, 7)
-	values_thal = [get(thal_counts, 3, 0), 
-               get(thal_counts, 6, 0), 
-               get(thal_counts, 7, 0)]
-
-	# Plotting the Bar Chart for Thal Values
-	bar(labels_thal, values_thal, 
-    	title="Thal Distribution", 
-    	xlabel="Thal Type", 
-    	ylabel="Count", 
-    	legend=false, 
-    	bar_width=0.6, 
-    	color=:blue)
-end
-
-# ╔═╡ 9aa55ee1-6116-43f8-b6df-84f79ec0071f
-begin
-
-	#TODO; make this on the bar graph!!!
-	total_count_thal = sum(values_thal)
-
-	# Calculate percentages
-	percentages_thal = [100 * value / total_count_thal for value in values_thal]
-
-	# Create custom labels for the legend with percentages
-	legend_labels_thal = ["$(labels_thal[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_thal)]
+	create_bar_plot(
+    	data=df.thal, 
+    	labels=["Normal", "Fixed Defect", "Reversible Defect"], 
+    	values_to_extract=[3, 6, 7], 
+    	plot_title="Thal Categories", 
+    	xlabel_text="Thal Type", 
+    	ylabel_text="Count"
+	)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2161,15 +1991,11 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╠═92a554a2-ff53-477b-8ccf-4a178ee01672
+# ╠═f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
 # ╟─001f6d24-7d1d-11ef-39a9-cb99a87ca3bd
 # ╟─f298fb92-9015-4de9-942e-11206ae80183
 # ╠═a174259c-5822-4aa1-b162-d07deef886af
 # ╠═d6c8603b-569f-4c02-a3fb-3d0e74bbf638
-# ╠═ee304698-10b8-4a62-9cb5-190fcf5ec3c0
-# ╠═d5138acc-cdbf-4a56-8a20-86442732b70b
-# ╠═2863d3e2-02e3-4340-bd72-5ff50189e6b2
-# ╠═9d7907a0-8f62-4403-bb23-8d189c84d46c
-# ╠═63f722e1-2daf-4a7f-a360-c14389ea2bd4
 # ╟─e804fdc5-cca9-4912-8c51-d39accde1d3f
 # ╟─35fa6501-bd25-44ef-baca-f5bf27d55820
 # ╟─f834790d-2ff3-42a7-9570-2bdf8526d0d4
@@ -2196,9 +2022,10 @@ version = "1.4.1+1"
 # ╠═84a429d3-653b-4572-8458-b534dd415899
 # ╟─c84c8d42-152d-4e6e-bf06-099774678e50
 # ╠═28b97da7-eea2-4199-b063-acf8bdca7d08
+# ╠═6760f6ec-0f99-4ef6-9752-3bcb46150955
 # ╠═653c7c1e-424a-4d88-972d-a161a8654a33
 # ╟─32fe8106-97ed-4a48-8980-e221a0ea79fb
-# ╟─26dde9f9-ad73-454c-b475-dfc09894f400
+# ╠═26dde9f9-ad73-454c-b475-dfc09894f400
 # ╟─53503b2d-e4c7-4570-8262-20e8ffb50156
 # ╠═aa772ca5-cedd-4805-add7-0404048b6e2e
 # ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
@@ -2211,8 +2038,7 @@ version = "1.4.1+1"
 # ╟─a407201e-5260-49ea-b48f-376b1714169b
 # ╠═67400cd2-9892-4502-a5de-19fdecd9598a
 # ╟─027d26f8-5177-4be1-b333-a7810792c6e7
-# ╠═075f240e-29ab-45c3-ad3f-5b49aeeac68b
-# ╠═acec42eb-1d27-479a-a8e2-06a0c5b8a698
+# ╠═4d50430f-1fa0-4eee-8cf1-ef81e56f7402
 # ╟─064e0ac4-7458-4a19-8e12-0395eb92a654
 # ╠═a2276471-2077-4953-aa6a-078b46a7995d
 # ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
@@ -2222,6 +2048,5 @@ version = "1.4.1+1"
 # ╠═591b6955-22d5-4b30-9cc6-c2fa57adbc92
 # ╟─ea52f75b-8893-41c1-b53b-0b706dc1f56a
 # ╠═b908bc5c-c63d-4f00-9471-28eb51cc59fa
-# ╠═9aa55ee1-6116-43f8-b6df-84f79ec0071f
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
