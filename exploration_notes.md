@@ -30,11 +30,6 @@
 From the above we can see some initial properties of the data
 2) Features are Categorical, Continuous and Binary types
 1) Many of the features are in different scales
-
-- `Age` has a median of 55.0 with a first quartile of 48.0 and a third quartile of 61.0
-- `Resting Blood Presure` has a median of 130.0 with a first quartile of 120.0 and a third quartile of 140.0
-- Serum Cholesterol are 
-
 ## Feature Analysis
 
 ### Age (Continuous)
