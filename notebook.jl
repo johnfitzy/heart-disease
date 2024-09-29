@@ -126,7 +126,8 @@ begin
 		hist_xlabel::String, 
 		hist_ylabel::String, 
 		density_xlabel::String, 
-		density_ylabel::String
+		density_ylabel::String,
+		bins::Int = 10
 	)
 
 		
@@ -138,7 +139,7 @@ begin
         	title=hist_title, 
             xlabel=hist_xlabel, 
             ylabel=hist_ylabel, 
-            bins=10, 
+            bins=bins, 
             legend=false)
 
     	# Add a density plot to the second subplot
@@ -291,8 +292,21 @@ begin
     	ylabel="Count", 
     	legend=false, 
     	bar_width=0.6, 
-    	color=:blue) 
+    	color=[:red, :green, :blue, :orange]) 
 
+end
+
+# ╔═╡ 81bac2a3-a83f-4ab6-a54e-e683be02bbf7
+begin
+
+	#TODO; make this on the bar graph!!!
+	total_count = sum(values)
+
+	# Calculate percentages
+	percentages = [100 * value / total_count for value in values]
+
+	# Create custom labels for the legend with percentages
+	legend_labels = ["$(labels_cp[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_cp)]
 end
 
 # ╔═╡ 16748bd6-6f85-48cf-8043-c3ab2c8abbb9
@@ -411,6 +425,18 @@ begin
     	color=:blue)
 end
 
+# ╔═╡ 653c7c1e-424a-4d88-972d-a161a8654a33
+begin
+	#TODO; make this on the bar graph!!!
+	total_count_ecg = sum(values_ecg)
+
+	# Calculate percentages
+	percentages_ecg = [100 * value / total_count_ecg for value in values_ecg]
+
+	# Create custom labels for the legend with percentages
+	legend_labels_ecg = ["$(labels_ecg[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_ecg)]
+end
+
 # ╔═╡ 32fe8106-97ed-4a48-8980-e221a0ea79fb
 md"""
 ## Feature Analysis: Angina with exercise (exang)
@@ -464,6 +490,9 @@ md"""
 # ╔═╡ 80f1f0c8-d4b8-4d49-a532-d73a477046c7
 describe(df.oldpeak)
 
+# ╔═╡ 5dd78dbc-5e34-4c03-bd9a-f6c1de673106
+df.oldpeak
+
 # ╔═╡ a4701191-219f-4c3f-97f4-8dc4b35dd410
 # Histogram and Density Plot for oldpeak
 create_hist_density_plot(df.oldpeak, 
@@ -472,7 +501,8 @@ create_hist_density_plot(df.oldpeak,
                          "Oldpeak", 
                          "Frequency", 
                          "Oldpeak", 
-                         "Density")
+                         "Density"
+						)
 
 # ╔═╡ a407201e-5260-49ea-b48f-376b1714169b
 # Combined Violin, Dot, and Box Plot for oldpeak
@@ -516,13 +546,33 @@ begin
     	color=:blue)
 end
 
+# ╔═╡ acec42eb-1d27-479a-a8e2-06a0c5b8a698
+begin
+
+#TODO; make this on the bar graph!!!
+	total_count_slope = sum(values_slope)
+
+	# Calculate percentages
+	percentages_slope = [100 * value / total_count_slope for value in values_slope]
+
+	# Create custom labels for the legend with percentages
+	legend_labels_slope = ["$(labels_slope[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_slope)]
+end
+
+
 # ╔═╡ 064e0ac4-7458-4a19-8e12-0395eb92a654
 md"""
 ## Feature Analysis: Major Vessels
 """
 
+# ╔═╡ a2276471-2077-4953-aa6a-078b46a7995d
+#TODO; this seems more like cat eh? df.major_vessels
+
 # ╔═╡ c5056e29-9545-4a94-bc65-6d9fd562424e
 describe(df.major_vessels)
+
+# ╔═╡ f044966e-132e-4539-acc7-09e009b9ad4d
+df.major_vessels
 
 # ╔═╡ 6cf11a9a-a837-457d-8649-afbdf8926304
 # Histogram and Density Plot for major_vessels
@@ -532,7 +582,7 @@ create_hist_density_plot(df.major_vessels,
                          "Major Vessels", 
                          "Frequency", 
                          "Major Vessels", 
-                         "Density")
+                         "Density", 4) # bins 5
 
 # ╔═╡ 34809859-74e2-410b-b623-6212def3cc53
 # Combined Violin, Dot, and Box Plot for major_vessels
@@ -550,29 +600,43 @@ md"""
 ## Feature Analysis: Thal
 """
 
-# ╔═╡ a647e7b8-1c3a-4402-9852-eeb1d5506e60
-describe(df.thal)
+# ╔═╡ b908bc5c-c63d-4f00-9471-28eb51cc59fa
+begin
+	# Count occurrences of each thal type
+	thal_counts = countmap(df.thal)
 
-# ╔═╡ 98da02c7-9ed8-422b-9180-5e478768a543
-# Histogram and Density Plot for thal
-create_hist_density_plot(df.thal, 
-                         "Thal Distribution", 
-                         "Density Plot of Thal", 
-                         "Thal", 
-                         "Frequency", 
-                         "Thal", 
-                         "Density")
+	# Define labels for each thal type
+	labels_thal = ["Normal", 
+               "Fixed Defect", 
+               "Reversible Defect"]
 
-# ╔═╡ 11f7495e-6f26-45bd-9cd8-6a914fbcf542
-# Combined Violin, Dot, and Box Plot for thal
-create_combined_plot(df.thal, 
-                     "Thal Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Thal")
+	# Extract counts for each category (3, 6, 7)
+	values_thal = [get(thal_counts, 3, 0), 
+               get(thal_counts, 6, 0), 
+               get(thal_counts, 7, 0)]
 
-# ╔═╡ b70208cf-2a42-4ddd-bf25-abcec62a6376
-# QQ Plot for thal
-create_qqplot(df.thal, "QQ Plot of Thal")
+	# Plotting the Bar Chart for Thal Values
+	bar(labels_thal, values_thal, 
+    	title="Thal Distribution", 
+    	xlabel="Thal Type", 
+    	ylabel="Count", 
+    	legend=false, 
+    	bar_width=0.6, 
+    	color=:blue)
+end
+
+# ╔═╡ 9aa55ee1-6116-43f8-b6df-84f79ec0071f
+begin
+
+	#TODO; make this on the bar graph!!!
+	total_count_thal = sum(values_thal)
+
+	# Calculate percentages
+	percentages_thal = [100 * value / total_count_thal for value in values_thal]
+
+	# Create custom labels for the legend with percentages
+	legend_labels_thal = ["$(labels_thal[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_thal)]
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2117,6 +2181,7 @@ version = "1.4.1+1"
 # ╠═90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
 # ╟─95398b93-4809-4339-afa8-d653dd1b52db
 # ╠═126128d5-8690-4cf0-abab-0a58229ef111
+# ╠═81bac2a3-a83f-4ab6-a54e-e683be02bbf7
 # ╟─16748bd6-6f85-48cf-8043-c3ab2c8abbb9
 # ╠═ffe1d39f-37b7-440e-befd-b31cc696fee3
 # ╟─face61a1-a2d3-4700-a886-184cfb19700a
@@ -2131,6 +2196,7 @@ version = "1.4.1+1"
 # ╠═84a429d3-653b-4572-8458-b534dd415899
 # ╟─c84c8d42-152d-4e6e-bf06-099774678e50
 # ╠═28b97da7-eea2-4199-b063-acf8bdca7d08
+# ╠═653c7c1e-424a-4d88-972d-a161a8654a33
 # ╟─32fe8106-97ed-4a48-8980-e221a0ea79fb
 # ╟─26dde9f9-ad73-454c-b475-dfc09894f400
 # ╟─53503b2d-e4c7-4570-8262-20e8ffb50156
@@ -2138,22 +2204,24 @@ version = "1.4.1+1"
 # ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
 # ╠═26f71e4e-34df-44a6-89e3-e2e40db03cf7
 # ╠═bc4edeec-229e-48e5-b29a-a6bafb8040c2
-# ╠═579c4514-ae8e-4321-9aef-6977f2dacba2
+# ╟─579c4514-ae8e-4321-9aef-6977f2dacba2
 # ╠═80f1f0c8-d4b8-4d49-a532-d73a477046c7
+# ╠═5dd78dbc-5e34-4c03-bd9a-f6c1de673106
 # ╠═a4701191-219f-4c3f-97f4-8dc4b35dd410
 # ╟─a407201e-5260-49ea-b48f-376b1714169b
 # ╠═67400cd2-9892-4502-a5de-19fdecd9598a
 # ╟─027d26f8-5177-4be1-b333-a7810792c6e7
-# ╟─075f240e-29ab-45c3-ad3f-5b49aeeac68b
+# ╠═075f240e-29ab-45c3-ad3f-5b49aeeac68b
+# ╠═acec42eb-1d27-479a-a8e2-06a0c5b8a698
 # ╟─064e0ac4-7458-4a19-8e12-0395eb92a654
+# ╠═a2276471-2077-4953-aa6a-078b46a7995d
 # ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
-# ╟─6cf11a9a-a837-457d-8649-afbdf8926304
+# ╠═f044966e-132e-4539-acc7-09e009b9ad4d
+# ╠═6cf11a9a-a837-457d-8649-afbdf8926304
 # ╟─34809859-74e2-410b-b623-6212def3cc53
 # ╠═591b6955-22d5-4b30-9cc6-c2fa57adbc92
 # ╟─ea52f75b-8893-41c1-b53b-0b706dc1f56a
-# ╠═a647e7b8-1c3a-4402-9852-eeb1d5506e60
-# ╠═98da02c7-9ed8-422b-9180-5e478768a543
-# ╟─11f7495e-6f26-45bd-9cd8-6a914fbcf542
-# ╠═b70208cf-2a42-4ddd-bf25-abcec62a6376
+# ╠═b908bc5c-c63d-4f00-9471-28eb51cc59fa
+# ╠═9aa55ee1-6116-43f8-b6df-84f79ec0071f
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
