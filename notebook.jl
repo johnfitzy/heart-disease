@@ -10,13 +10,6 @@ using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
 # ╔═╡ f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
 include("src/plotting_functions.jl")
 
-# ╔═╡ 001f6d24-7d1d-11ef-39a9-cb99a87ca3bd
-md"""
-# TODO:
-- Open up the data and merge the index
-- Have a look around and the format of the data
-"""
-
 # ╔═╡ f298fb92-9015-4de9-942e-11206ae80183
 md"""
 | Variable Name           | Role    | Type         | Description                                                      |
@@ -91,18 +84,44 @@ md"""
 # Part One: Exploratory Data Analysis
 """
 
+# ╔═╡ 24dc537e-6786-40e2-9305-a21dbe11d305
+md"""
+
+## Data Sneak Peak
+| age  | sex  | chest_pain | rest_bp | serum_chol | fasting_blood_sugar | electrocardiographic | max_heart_rate | angina | oldpeak | slope | major_vessels | thal | heart_disease |
+|------|------|------------|---------|------------|---------------------|----------------------|----------------|--------|---------|-------|---------------|------|---------------|
+| 70.0 | 1.0  | 4.0        | 130.0   | 322.0      | 0.0                 | 2.0                  | 109.0          | 0.0    | 2.4     | 2.0   | 3.0           | 3.0  | 2             |
+| 67.0 | 0.0  | 3.0        | 115.0   | 564.0      | 0.0                 | 2.0                  | 160.0          | 0.0    | 1.6     | 2.0   | 0.0           | 7.0  | 1             |
+| 57.0 | 1.0  | 2.0        | 124.0   | 261.0      | 0.0                 | 0.0                  | 141.0          | 0.0    | 0.3     | 1.0   | 0.0           | 7.0  | 2             |
+
+From the above we can see some initial properties of the data
+1) Features are Categorical, Continuous and Binary types
+2) Many of the features are in different scales
+
+
+"""
+
 # ╔═╡ f834790d-2ff3-42a7-9570-2bdf8526d0d4
 md"""
 ## Feature Analysis: Sex
 """
 
+# ╔═╡ 1847271c-13d1-40e9-8510-5df10c8d3387
+md"""
+##### Comments:
+- 67.8 % are male
+- 32.2 % are female
+"""
+
 # ╔═╡ e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
 begin
-	create_percentage_bar_plot(df.sex, 
-                           "Sex Distribution (Percentage)", 
-                           "Sex", 
-                           "Percentage (%)", 
-                           ["Male", "Female"])
+	create_binary_bar_plot(
+		data=df.sex, 
+		title_text="Sex Distribution (Percentage)",
+		xlabel_text="Sex",
+		ylabel_text="Count",
+		labels=["Male", "Female"]		
+	)
 end
 
 # ╔═╡ 69956da7-2ec9-446f-b820-9918cb7f7a2a
@@ -112,6 +131,18 @@ md"""
 
 # ╔═╡ ea135519-5c1c-4133-96af-4217ce2e8125
 describe(df.age)
+
+# ╔═╡ 11cb6c44-506c-4261-a07d-27a6bdd3a7ea
+md"""
+
+##### Comments on Age feature:
+- The age data closely follows a normal distribution, as shown by the QQ Plot, although there are some outliers at the tails, indicating deviations at the extremes of the age spectrum.
+- The violin plot suggests a slight negative skew, with a tendency toward older individuals, implying that ages above the mean are slightly more prevalent.
+- A noticeable bump around the 40-45 year range suggests a local concentration of data points, which may reflect a particular subgroup or trend within the data.
+- The standard deviation of 9.109067 is about 16.7% of the mean (54.433333), indicating moderate variability. This suggests that while there is some spread in the ages, most data points remain relatively close to the mean, reflecting a reasonably consistent age distribution with moderate dispersion.
+- The proximity of the median (55) to the mean further supports the observation of a near-symmetrical distribution, despite the slight skew and presence of outliers.
+
+"""
 
 # ╔═╡ 004da6e2-b821-4096-b2e9-5f2ab5dc079e
 begin
@@ -143,42 +174,25 @@ md"""
 ## Feature Analysis: Chest Pain
 """
 
+# ╔═╡ b280a319-cfa7-4b79-8a7e-7805d9dcf808
+md"""
+##### Comments on Chest Paint feature:
+- Typical Angina 7.4%
+- Atypical Angina 15.6%
+- Non-Anginal Pain 29.3%
+- Asymptomatic 47.8%
+"""
+
 # ╔═╡ 126128d5-8690-4cf0-abab-0a58229ef111
 begin
-	
-	chest_pain_counts = countmap(df.chest_pain)
-
-	labels_cp = ["Typical Angina", 
-		"Atypical Angina", 
-		"Non-Anginal Pain", 
-		"Asymptomatic"]
-
-	values = [get(chest_pain_counts, 1, 0), 
-          get(chest_pain_counts, 2, 0), 
-          get(chest_pain_counts, 3, 0), 
-          get(chest_pain_counts, 4, 0)]
-
-	bar(labels_cp, values, 
-    	title="Chest Pain Distribution", 
-    	xlabel="Chest Pain Type", 
-    	ylabel="Count", 
-    	legend=false, 
-    	bar_width=0.6, 
-    	color=[:red, :green, :blue, :orange]) 
-
-end
-
-# ╔═╡ 81bac2a3-a83f-4ab6-a54e-e683be02bbf7
-begin
-
-	#TODO; make this on the bar graph!!!
-	total_count = sum(values)
-
-	# Calculate percentages
-	percentages = [100 * value / total_count for value in values]
-
-	# Create custom labels for the legend with percentages
-	legend_labels = ["$(labels_cp[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_cp)]
+	create_bar_plot(
+    	data=df.chest_pain, 
+    	labels=["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"],
+    	values_to_extract=[1, 2, 3, 4], 
+    	plot_title="Chest Pain Distribution", 
+    	xlabel_text="Chest Pain Type", 
+    	ylabel_text="Count"
+	)
 end
 
 # ╔═╡ 16748bd6-6f85-48cf-8043-c3ab2c8abbb9
@@ -188,6 +202,16 @@ md"""
 
 # ╔═╡ ffe1d39f-37b7-440e-befd-b31cc696fee3
 describe(df.rest_bp	)
+
+# ╔═╡ 06b8a523-96c1-48a5-88bb-1b5a112e92fd
+md"""
+##### Comments on Resting Blood Pressure feature:
+- The probability distribution is somewhat close to a normal distribution but exhibits a slight positive skew, with lower blood pressure readings being more frequent and a longer right tail indicating higher values.
+- The data contains several outliers, with some very high readings indicating elevated blood pressure and a few low outliers. These extremes suggest the presence of individuals with unusual resting blood pressure levels, both high and low.
+- The standard deviation of 17.861608 is about 13.6% of the mean (131.344444), indicating moderate variability relative to the mean. This suggests that the data points are relatively close to the mean, reflecting a reasonably tight distribution compared to the overall scale of blood pressure values.
+- The median (130) is close to the mean, which indicates a reasonably symmetric central tendency, despite the presence of skew and outliers.
+- The interquartile range (120 to 140) captures the middle 50% of the data, showing a typical range of resting blood pressure values that are relatively close to the average, supporting the observation of moderate variability.
+"""
 
 # ╔═╡ face61a1-a2d3-4700-a886-184cfb19700a
 begin
@@ -226,6 +250,16 @@ md"""
 # ╔═╡ 7d50fa1c-77b2-4a48-b825-1c3664684f42
 describe(df.serum_chol)
 
+# ╔═╡ b22b3bb3-ea6b-41e5-bd74-62f5145c4416
+md"""
+#### Comments on Serum Cholesterol feature:
+- The probability distribution is somewhat close to a normal distribution; however, the presence of high cholesterol outliers creates a significant positive skew, resulting in a long right tail. This suggests that while most cholesterol levels are centered around the mean, there are individuals with unusually high levels.
+- The standard deviation of 51.686237 is approximately 20.7% of the mean (249.659259), indicating moderate variability in relation to the average cholesterol level. This suggests that the data points are fairly spread around the mean, reflecting moderate dispersion compared to the typical value.
+- The median (245) is slightly lower than the mean, reinforcing the presence of skew toward higher values due to the outliers.
+- The interquartile range (213 to 280) shows where the central 50% of the data lies, which is relatively close to the mean but skewed upward, highlighting that while typical values are consistent, extreme values contribute significantly to the overall spread.
+- Overall, the data reflects a distribution where most individuals have cholesterol levels close to the mean, but the influence of high outliers pulls the average up, leading to the observed skew and extended tail.
+"""
+
 # ╔═╡ 9113278a-604c-44fc-a51a-610c4ce37064
 	create_hist_density_plot(df.serum_chol, 
     	"Serum Cholesterol Distribution", 
@@ -255,47 +289,28 @@ md"""
 ## Feature Analysis: Fasting Blood Sugar > 120 mg/dL 
 """
 
+# ╔═╡ 76b2416d-fd48-4189-842b-157ebea1ed97
+md"""
+##### Comments on Fasting Blood Sugar feature:
+- 14.8% of people had elevated fasting blood sugar levels
+- 85.2% of people had normal fasting blood sugar levels
+"""
+
 # ╔═╡ 84a429d3-653b-4572-8458-b534dd415899
 begin
-	# Function call to create a percentage bar plot for df.fasting_blood_sugar
-	create_percentage_bar_plot(df.fasting_blood_sugar, 
-		"Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
-        "Fasting Blood Sugar",  # X-axis label
-        "Percentage (%)",       # Y-axis label
-        ["Elevated", "Normal"]
-	) # Labels for the binary categories
-
+	create_binary_bar_plot(
+    	data = df.fasting_blood_sugar, 
+    	title_text = "Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
+    	xlabel_text = "Fasting Blood Sugar",  # X-axis label
+    	ylabel_text = "Count",       # Y-axis label
+    	labels = ["Elevated", "Normal"]  # Labels for the binary categories
+	)
 end
 
 # ╔═╡ c84c8d42-152d-4e6e-bf06-099774678e50
 md"""
 ## Feature Analysis: Resting Electrocardiographic
 """
-
-# ╔═╡ 28b97da7-eea2-4199-b063-acf8bdca7d08
-begin
-	# Count occurrences of each electrocardiographic type
-	electrocardiographic_counts = countmap(df.electrocardiographic)
-
-	# Define labels for each electrocardiographic type
-	labels_ecg = ["Normal", 
-    	"ST-T Wave Abnormality", 
-        "Left Ventricular Hypertrophy"]
-
-	# Extract counts for each category (0, 1, 2)
-	values_ecg = [get(electrocardiographic_counts, 0, 0), 
-    	get(electrocardiographic_counts, 1, 0), 
-        get(electrocardiographic_counts, 2, 0)]
-
-	# Plotting the Bar Chart for Electrocardiographic Results
-	bar(labels_ecg, values_ecg, 
-    	title="Resting Electrocardiographic Results Distribution", 
-    	xlabel="Electrocardiographic Type", 
-    	ylabel="Count", 
-    	legend=false, 
-    	bar_width=0.6, 
-    	color=:blue)
-end
 
 # ╔═╡ 6760f6ec-0f99-4ef6-9752-3bcb46150955
 begin
@@ -309,31 +324,29 @@ begin
 	)
 end
 
-# ╔═╡ 653c7c1e-424a-4d88-972d-a161a8654a33
-begin
-	#TODO; make this on the bar graph!!!
-	total_count_ecg = sum(values_ecg)
-
-	# Calculate percentages
-	percentages_ecg = [100 * value / total_count_ecg for value in values_ecg]
-
-	# Create custom labels for the legend with percentages
-	legend_labels_ecg = ["$(labels_ecg[i]) $(round(percentages[i], digits=1))%" for i in 1:length(labels_ecg)]
-end
-
 # ╔═╡ 32fe8106-97ed-4a48-8980-e221a0ea79fb
 md"""
-## Feature Analysis: Angina with exercise (exang)
+## Feature Analysis: Angina with Exercise (exang)
+"""
+
+# ╔═╡ 9d893067-18be-4982-9b42-f18de0a0ed5f
+md"""
+##### Comments on Angina with Exercise feature:
+- 33.0% have exercise induced angina
+- 77.0% do not have exercise induced angina
 """
 
 # ╔═╡ 26dde9f9-ad73-454c-b475-dfc09894f400
 begin
 	# Function call to create a percentage bar plot for df.angina
-	create_binary_bar_plot(df.angina, 
-    	"Angina with Exercise Distribution (Percentage)",  # Title of the plot
-        "Angina with Exercise",  # X-axis label
-        "Percentage (%)",        # Y-axis label
-        ["Yes", "No"])           # Labels for the categories 1 (yes) and 0 (no)
+	create_binary_bar_plot(
+    	data = df.angina, 
+    	title_text = "Angina with Exercise Distribution (Percentage)",  # Title of the plot
+    	xlabel_text = "Angina with Exercise",  # X-axis label
+    	ylabel_text = "Percentage (%)",        # Y-axis label
+    	labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
+	)
+
 end
 
 # ╔═╡ 53503b2d-e4c7-4570-8262-20e8ffb50156
@@ -343,6 +356,17 @@ md"""
 
 # ╔═╡ aa772ca5-cedd-4805-add7-0404048b6e2e
 describe(df.max_heart_rate)
+
+# ╔═╡ bfc09914-c84d-4e70-8ef3-57e201c74b96
+md"""
+##### Comments on Max Heart Rate feature:
+- The data exhibits a negative skew with a long left tail, indicating that there are outliers with unusually low maximum heart rates. This skew suggests that while most individuals achieve higher maximum heart rates, some have significantly lower values that pull the distribution leftward.
+- The standard deviation is 23.165717, which is approximately 15.5% of the mean (149.677778). This indicates moderate variability relative to the average, suggesting that the heart rate values are spread moderately around the mean, reflecting a fairly consistent range for most individuals.
+- The median (153.5) is slightly higher than the mean, further supporting the negative skew, as more data points lie above the average, with fewer, but more extreme, lower values.
+- The interquartile range (133 to 166) captures the central 50% of the data, indicating that most maximum heart rates are relatively close to the mean, despite the presence of lower outliers.
+- Overall, the data suggests that while most maximum heart rates are clustered around typical values, the left skew highlights the influence of individuals with notably lower heart rates, contributing to the overall spread and shape of the distribution.
+
+"""
 
 # ╔═╡ 7eb478b5-6103-44af-bd28-48e5f2fd9080
 # Histogram and Density Plot for max_heart_rate
@@ -375,16 +399,24 @@ md"""
 describe(df.oldpeak)
 
 # ╔═╡ 5dd78dbc-5e34-4c03-bd9a-f6c1de673106
-df.oldpeak
+md"""
+##### Comments on Oldspeak feature:
+- The data is heavily positively skewed, with a long right tail, indicating that most values are concentrated at lower levels of ST depression, while a few cases exhibit significantly higher values, extending the distribution to the right.
+- The standard deviation is 1.145210, which is approximately 109% of the mean (1.050000), indicating high variability relative to the average value. This large spread suggests that while many individuals have low ST depression levels, there is considerable dispersion with some experiencing much higher values.
+- The median (0.8) is below the mean, highlighting the positive skew and indicating that over half of the observations fall below the average value, with outliers on the higher end pulling the mean upward.
+- The interquartile range (0.0 to 1.6) suggests that the central 50% of the data is relatively concentrated at the lower end, emphasizing that most individuals experience minimal to moderate levels of ST depression.
+- Overall, the distribution reflects a pattern where lower values are most common, but the presence of high outliers creates a long tail, driving the overall skew and variability observed in the data.
+
+"""
 
 # ╔═╡ a4701191-219f-4c3f-97f4-8dc4b35dd410
-# Histogram and Density Plot for oldpeak
+# Histogram and Density Plot for oldspeak
 create_hist_density_plot(df.oldpeak, 
-                         "Oldpeak Distribution", 
-                         "Density Plot of Oldpeak", 
-                         "Oldpeak", 
+                         "Oldspeak Distribution", 
+                         "Density Plot of Oldspeak", 
+                         "Oldspeak", 
                          "Frequency", 
-                         "Oldpeak", 
+                         "Oldspeak", 
                          "Density"
 						)
 
@@ -404,6 +436,14 @@ md"""
 ## Feature Analysis: Slope
 """
 
+# ╔═╡ 9d3c1583-eac0-4d38-9a86-d7db17865b6f
+md"""
+##### Comments on Slope feature:
+- Upsloping 7.4%
+- Flat 15.6%
+- Downsloping 29.3%
+"""
+
 # ╔═╡ 4d50430f-1fa0-4eee-8cf1-ef81e56f7402
 begin
 	create_bar_plot(
@@ -421,14 +461,20 @@ md"""
 ## Feature Analysis: Major Vessels
 """
 
-# ╔═╡ a2276471-2077-4953-aa6a-078b46a7995d
-#TODO; this seems more like cat eh? df.major_vessels
-
 # ╔═╡ c5056e29-9545-4a94-bc65-6d9fd562424e
 describe(df.major_vessels)
 
 # ╔═╡ f044966e-132e-4539-acc7-09e009b9ad4d
-df.major_vessels
+md"""
+##### Comments on Major Vessesl feature:
+- The data is heavily positively skewed with a long right tail, indicating that the majority of observations have zero major vessels colored by fluoroscopy, while a smaller number of cases have high-er values.
+- The standard deviation is 0.943896, which is approximately 141% of the mean (0.670370). This high relative variability suggests a wide spread compared to the average value, primarily driven by the presence of higher values and the skewed nature of the data.
+- The median (0.000000) and the first quartile (0.000000) indicate that at least half of the data points have no major vessels colored, underscoring the concentration of data at the lower end.
+- The third quartile (1.000000) and maximum (3.000000) highlight the extent of variability, with a smaller proportion of individuals having more vessels involved, which significantly contributes to the long right tail.
+- Overall, the distribution reflects a dataset where the majority of cases have no vessels colored, but a minority with higher counts creates a substantial skew, pulling the mean up and increasing overall variability.
+
+
+"""
 
 # ╔═╡ 6cf11a9a-a837-457d-8649-afbdf8926304
 # Histogram and Density Plot for major_vessels
@@ -454,6 +500,16 @@ create_qqplot(df.major_vessels, "QQ Plot of Major Vessels")
 # ╔═╡ ea52f75b-8893-41c1-b53b-0b706dc1f56a
 md"""
 ## Feature Analysis: Thal
+"""
+
+# ╔═╡ a060652c-9af9-4377-acd5-11b357529aca
+md"""
+##### Comments on Thal feature:
+
+- Normal 7.4%
+- Fixed Defect 15.6%
+- Reversible Defect 29.3%
+
 """
 
 # ╔═╡ b908bc5c-c63d-4f00-9471-28eb51cc59fa
@@ -1992,61 +2048,67 @@ version = "1.4.1+1"
 # ╔═╡ Cell order:
 # ╠═92a554a2-ff53-477b-8ccf-4a178ee01672
 # ╠═f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
-# ╟─001f6d24-7d1d-11ef-39a9-cb99a87ca3bd
 # ╟─f298fb92-9015-4de9-942e-11206ae80183
 # ╠═a174259c-5822-4aa1-b162-d07deef886af
 # ╠═d6c8603b-569f-4c02-a3fb-3d0e74bbf638
 # ╟─e804fdc5-cca9-4912-8c51-d39accde1d3f
 # ╟─35fa6501-bd25-44ef-baca-f5bf27d55820
+# ╟─24dc537e-6786-40e2-9305-a21dbe11d305
 # ╟─f834790d-2ff3-42a7-9570-2bdf8526d0d4
-# ╠═e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
+# ╟─1847271c-13d1-40e9-8510-5df10c8d3387
+# ╟─e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
 # ╟─69956da7-2ec9-446f-b820-9918cb7f7a2a
 # ╠═ea135519-5c1c-4133-96af-4217ce2e8125
-# ╠═004da6e2-b821-4096-b2e9-5f2ab5dc079e
-# ╠═d374d9b1-dcad-44a2-9020-ddeb669e435c
+# ╟─11cb6c44-506c-4261-a07d-27a6bdd3a7ea
+# ╟─004da6e2-b821-4096-b2e9-5f2ab5dc079e
+# ╟─d374d9b1-dcad-44a2-9020-ddeb669e435c
 # ╠═90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
 # ╟─95398b93-4809-4339-afa8-d653dd1b52db
+# ╟─b280a319-cfa7-4b79-8a7e-7805d9dcf808
 # ╠═126128d5-8690-4cf0-abab-0a58229ef111
-# ╠═81bac2a3-a83f-4ab6-a54e-e683be02bbf7
 # ╟─16748bd6-6f85-48cf-8043-c3ab2c8abbb9
 # ╠═ffe1d39f-37b7-440e-befd-b31cc696fee3
+# ╟─06b8a523-96c1-48a5-88bb-1b5a112e92fd
 # ╟─face61a1-a2d3-4700-a886-184cfb19700a
 # ╟─fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
 # ╠═718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
 # ╟─17fe2f69-2610-431f-af05-434e5ec1e6ef
 # ╠═7d50fa1c-77b2-4a48-b825-1c3664684f42
+# ╟─b22b3bb3-ea6b-41e5-bd74-62f5145c4416
 # ╠═9113278a-604c-44fc-a51a-610c4ce37064
 # ╠═aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
 # ╠═f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
 # ╟─d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
-# ╠═84a429d3-653b-4572-8458-b534dd415899
+# ╟─76b2416d-fd48-4189-842b-157ebea1ed97
+# ╟─84a429d3-653b-4572-8458-b534dd415899
 # ╟─c84c8d42-152d-4e6e-bf06-099774678e50
-# ╠═28b97da7-eea2-4199-b063-acf8bdca7d08
-# ╠═6760f6ec-0f99-4ef6-9752-3bcb46150955
-# ╠═653c7c1e-424a-4d88-972d-a161a8654a33
+# ╟─6760f6ec-0f99-4ef6-9752-3bcb46150955
 # ╟─32fe8106-97ed-4a48-8980-e221a0ea79fb
+# ╟─9d893067-18be-4982-9b42-f18de0a0ed5f
 # ╠═26dde9f9-ad73-454c-b475-dfc09894f400
 # ╟─53503b2d-e4c7-4570-8262-20e8ffb50156
 # ╠═aa772ca5-cedd-4805-add7-0404048b6e2e
-# ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
-# ╠═26f71e4e-34df-44a6-89e3-e2e40db03cf7
-# ╠═bc4edeec-229e-48e5-b29a-a6bafb8040c2
+# ╟─bfc09914-c84d-4e70-8ef3-57e201c74b96
+# ╟─7eb478b5-6103-44af-bd28-48e5f2fd9080
+# ╟─26f71e4e-34df-44a6-89e3-e2e40db03cf7
+# ╟─bc4edeec-229e-48e5-b29a-a6bafb8040c2
 # ╟─579c4514-ae8e-4321-9aef-6977f2dacba2
 # ╠═80f1f0c8-d4b8-4d49-a532-d73a477046c7
-# ╠═5dd78dbc-5e34-4c03-bd9a-f6c1de673106
-# ╠═a4701191-219f-4c3f-97f4-8dc4b35dd410
+# ╟─5dd78dbc-5e34-4c03-bd9a-f6c1de673106
+# ╟─a4701191-219f-4c3f-97f4-8dc4b35dd410
 # ╟─a407201e-5260-49ea-b48f-376b1714169b
 # ╠═67400cd2-9892-4502-a5de-19fdecd9598a
 # ╟─027d26f8-5177-4be1-b333-a7810792c6e7
-# ╠═4d50430f-1fa0-4eee-8cf1-ef81e56f7402
-# ╟─064e0ac4-7458-4a19-8e12-0395eb92a654
-# ╠═a2276471-2077-4953-aa6a-078b46a7995d
+# ╟─9d3c1583-eac0-4d38-9a86-d7db17865b6f
+# ╟─4d50430f-1fa0-4eee-8cf1-ef81e56f7402
+# ╠═064e0ac4-7458-4a19-8e12-0395eb92a654
 # ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
-# ╠═f044966e-132e-4539-acc7-09e009b9ad4d
-# ╠═6cf11a9a-a837-457d-8649-afbdf8926304
+# ╟─f044966e-132e-4539-acc7-09e009b9ad4d
+# ╟─6cf11a9a-a837-457d-8649-afbdf8926304
 # ╟─34809859-74e2-410b-b623-6212def3cc53
-# ╠═591b6955-22d5-4b30-9cc6-c2fa57adbc92
+# ╟─591b6955-22d5-4b30-9cc6-c2fa57adbc92
 # ╟─ea52f75b-8893-41c1-b53b-0b706dc1f56a
-# ╠═b908bc5c-c63d-4f00-9471-28eb51cc59fa
+# ╟─a060652c-9af9-4377-acd5-11b357529aca
+# ╟─b908bc5c-c63d-4f00-9471-28eb51cc59fa
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

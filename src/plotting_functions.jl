@@ -82,50 +82,60 @@ end
 
 # Define the reusable function for creating a bar chart with percentages
 function create_binary_bar_plot(
-    data::Vector{<:Number}, 
+    ; data::Vector{<:Number}, 
     title_text::String,
     xlabel_text::String, 
     ylabel_text::String, 
-    labels::Vector{String}
+    labels::Vector{String},
+    plot_width::Int = 800,  # Optional width
+    plot_height::Int = 400  # Optional height
 )
     # Count occurrences of each unique value in the data
-    value_counts = countmap(data)
+    counts = countmap(data)
 
-    # Extract counts for the first two unique values (assumed binary: 0 and 1 or similar)
-    first_count = get(value_counts, 1.0, 0)
-    second_count = get(value_counts, 0.0, 0)
+    # Extract counts for the first two unique values (assumed binary: 0 and 1)
+    values = [get(counts, v, 0) for v in [1.0, 0.0]]
 
-    # Calculate total for percentages
-    total = first_count + second_count
+    total_count = sum(values)
 
     # Check to prevent division by zero
-    if total == 0
+    if total_count == 0
         error("Total count is zero, cannot compute percentages.")
     end
 
     # Calculate percentages
-    first_percentage = 100 * first_count / total
-    second_percentage = 100 * second_count / total
-
-    # Prepare percentages and custom labels with values included
-    percentages = [first_percentage, second_percentage]
-    custom_labels = [
-        "$(labels[1]) $(round(first_percentage, digits=1))%", 
-        "$(labels[2]) $(round(second_percentage, digits=1))%"
-    ]
-
+    percentages = [100 * value / total_count for value in values]
+    
     # Plotting the Bar Chart with calculated percentages and custom labels
-    bar(
+    plt = bar(
         labels, 
         percentages, 
         title=title_text, 
         xlabel=xlabel_text, 
         ylabel=ylabel_text, 
-        label=custom_labels,
-        legend=:topright,   # Position the legend to the top right of the graph
-        yticks=0:10:100
+        legend=false,
+        yticks=0:10:100,   # Y-axis ticks for percentages
+        color=rand(distinguishable_colors(50), 2),  # Random colors for the bars
+        size=(plot_width, plot_height)  # Set the plot size
     )
+
+    # Annotate each bar with its percentage value inside the bar
+    for (i, percentage) in enumerate(percentages)
+        # Adjust the x and y positions for the annotation inside the bar
+        x_pos = i - 0.5  # Move the text slightly left (adjust as needed)
+        y_pos = percentage / 2  # Place the annotation in the middle of the bar (vertical position)
+
+        annotate!(
+            plt, 
+            x_pos,  # X position adjustment
+            y_pos,  # Y position
+            text("$(round(percentage, digits=1))%", :center, 12, :white)  # White text
+        )
+    end
+
+    plt
 end
+
 
 
 function create_bar_plot(
@@ -161,9 +171,18 @@ function create_bar_plot(
         size = (800, 400)
     )
 
-    # Annotate each bar with its percentage value
+    # Annotate each bar with its percentage value inside the bar
     for (i, percentage) in enumerate(percentages)
-        annotate!(plt, i, values[i], text("$(round(percentage, digits = 1))%", :right, 8, :black))
+        # Adjust the x and y positions for the annotation inside the bar
+        x_pos = i - 0.5  # Move the text slightly left (adjust as needed)
+        y_pos = values[i] / 2  # Place the annotation in the middle of the bar (vertical position)
+
+        annotate!(
+            plt, 
+            x_pos,  # X position adjustment
+            y_pos,  # Y position (middle of the bar)
+            text("$(round(percentage, digits=1))%", :center, 12, :white)  # White text
+        )
     end
 
     return plt
