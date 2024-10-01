@@ -4,13 +4,10 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
+# ╔═╡ 3694d2d2-7fc9-11ef-3bbc-6bbe31477ffd
+using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats
 
-# ╔═╡ 956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-include("src/plotting_functions.jl")
-
-# ╔═╡ 366b8da3-eb10-4a43-abf6-ad1beb5d74b6
+# ╔═╡ c9d7dd9e-33cf-4114-809a-1c5f4882c402
 begin
 	
 	# Define the column names
@@ -32,320 +29,89 @@ begin
 	]
 
 	# Open file as CSV
-	df = CSV.read("data/DS2/processed.cleveland.data", 
-		header=column_names, DataFrame) 
+	df = CSV.read("data/DS1/heart.dat", 
+		delim=' ', 
+		header=column_names,
+		DataFrame) 
 
 end
 
-# ╔═╡ ed55cc30-d877-4289-bfaa-6200b2287f2b
-size(df)
+# ╔═╡ bdee5750-31b6-4ab7-a6c2-89c3084405d6
+df.heart_disease
 
-# ╔═╡ 525a0646-d2c5-4a1e-be73-ac4f8032171a
-md"""
-## Feature Analysis: Sex
-"""
-
-# ╔═╡ dccf5d92-d1a1-4f50-a27f-84b393f95323
-describe(df.age)
-
-# ╔═╡ 24803bbf-7d98-4741-a99d-810812a25334
+# ╔═╡ 88742d02-416c-4c6a-bbdc-ab85e506ce53
 begin
-	create_binary_bar_plot(
-		data=df.sex, 
-		title_text="Sex Distribution (Percentage)",
-		xlabel_text="Sex",
-		ylabel_text="Count",
-		labels=["Male", "Female"]		
-	)
+	df_subset = df[:, 1:13]
+	# Keep the 14th column as the labels (binary: 0 or 1 for heart disease)
+	labels = df[:, 14]  # This is what you will use to color the points
+	X = Matrix(df_subset)'
+	X1 = standardize(ZScoreTransform, X, dims=2)
 end
 
-# ╔═╡ d81d784b-d417-4193-a2a2-6c72db0867e0
-md"""
-## Feature Analysis: Age
-"""
-
-# ╔═╡ ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
-describe(df.age)
-
-# ╔═╡ 7a319498-f455-4bad-b701-9c7842f2409e
+# ╔═╡ bea5d3bb-46fc-482e-b558-0921d2c0a03a
 begin
-	create_hist_density_plot(df.age, 
-    	"Age Distribution", 
-        "Density Plot of Age", 
-        "Age", 
-    	"Frequency", 
-        "Age", 
-        "Density"
-	)
+	using Random
+	
+	num_features = size(X1, 1)  # Number of rows (features)
+	
+	# Assume X1 is your matrix
+	num_data_points = size(X1, 2)  # Number of columns (data points)
+
+	# Define the train-test split ratio
+	train_ratio = 0.7
+	train_size = round(Int, train_ratio * num_data_points)
+
+	# Shuffle the indices of the columns (if you want a random split)
+	shuffled_indices = shuffle(1:num_data_points)
+
+	# Split the shuffled indices into training and testing sets
+	train_indices = shuffled_indices[1:train_size]
+	test_indices = shuffled_indices[train_size+1:end]
+
+	# Use the indices to get the training and testing sets
+	X1_train = X1[:, train_indices]
+	X1_test = X1[:, test_indices]
+
+	labels_train = labels[train_indices]  # Labels for the train set
+	labels_test = labels[test_indices]    # Labels for the test set
+
 end
 
-# ╔═╡ f61d891e-6f86-4019-8c64-a821416010c3
-begin
-	# Plot violin dot and box plot for age
-	create_combined_plot(df.age, "Age Violin, Dot and Box Plot", "Frequency", "Age")
 
-end
-
-# ╔═╡ 401d0182-3c6a-4597-b618-4ddc94ec8ac1
-begin
-	# Plot QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.age, "QQ Plot of Age")
-end
-
-# ╔═╡ 96e6ec73-d165-421c-98dd-746b3a9d16e0
-md"""
-## Feature Analysis: Chest Pain
-"""
-
-# ╔═╡ 546a4301-90eb-48b2-8544-a49adb7bbb1f
-describe(df.chest_pain)
-
-# ╔═╡ a13ed2b2-a21b-4d60-975c-50e39aa2d10f
-begin
-	create_bar_plot(
-    	data=df.chest_pain, 
-    	labels=["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"],
-    	values_to_extract=[1, 2, 3, 4], 
-    	plot_title="Chest Pain Distribution", 
-    	xlabel_text="Chest Pain Type", 
-    	ylabel_text="Count"
-	)
-end
-
-# ╔═╡ 392572bf-7261-4ba1-9a55-7336f4c39de6
-md"""
-## Feature Analysis: Resting Blood Presure	
-"""
-
-# ╔═╡ 7e1cf2a8-d746-4e10-acce-4d1f18dc80ba
-describe(df.rest_bp	)
-
-# ╔═╡ 2e3bf110-607a-4d30-a7a4-a17725d8ddd9
+# ╔═╡ 8e74589a-ff12-48d5-853d-3ec88afc0045
 begin
 
-	create_hist_density_plot(df.rest_bp, 
-		"Blood Pressure Distribution",  # Title for the histogram
-        "Density Plot of Blood Pressure",  # Title for the density plot
-        "Blood Pressure",  # X-axis label for the histogram
-    	"Frequency",       # Y-axis label for the histogram
-        "Blood Pressure",  # X-axis label for the density plot
-        "Density")         # Y-axis label for the density plot
+	# Perform PCA on the training set
+	M = fit(PCA, X1_train; maxoutdim=2)
 
 end
 
-# ╔═╡ 8cf0d368-8f25-4a36-86db-69622dcc4772
+# ╔═╡ ac3544a2-e7cb-41bd-8a86-9f7ab36634f3
 begin
 
-	create_combined_plot(df.rest_bp, 
-		"Resting Blood Presure Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Blood Presure")
+	# Transform the test set using the PCA model
+	Y_test = predict(M, X1_test)
 
 end
 
-# ╔═╡ d6ffc721-4493-4348-84b6-8ac3a6d33033
+# ╔═╡ 5477db31-2191-4947-9d13-a0a5dddf1cbb
 begin
-	# QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.rest_bp, "QQ Plot of Resting Blood Pressure")
+# 5. Plotting the results with color coding based on the labels
+# Separate the data based on the labels (binary: 0 = no disease, 1 = disease)
+	no_disease = Y_test[:, labels_test .== 1]
+	has_disease = Y_test[:, labels_test .== 2]
 end
 
-# ╔═╡ fe4fc731-af80-48f4-b1e1-2ee388192cf9
-md"""
-## Feature Analysis: Serum Cholesterol
-"""
+# ╔═╡ 07b17748-a390-4645-8ac1-c6a31f0712d1
+begin
 
-# ╔═╡ f2808383-89dc-45ad-bfcd-90e9131600aa
-describe(df.serum_chol)
+	scatter(no_disease[1, :], no_disease[2, :], 
+    	marker=:circle, color=:blue, label="No Disease", 
+    	xlabel="PC1", ylabel="PC2", zlabel="PC3")
 
-# ╔═╡ 34387574-d4c7-48f7-98c3-9fe08e54e0be
-	create_hist_density_plot(df.serum_chol, 
-    	"Serum Cholesterol Distribution", 
-        "Density Plot of Serum Cholesterol", 
-        "cholesterol", 
-    	"Frequency", 
-        "Serum Cholesterol", 
-        "Density"
-	)
-
-# ╔═╡ 63dac896-2cb2-41a9-b5d3-4fc6ec053675
-create_combined_plot(df.serum_chol, 
-		"Serum Cholesterol Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Serum Cholesterol")
-
-# ╔═╡ c353cece-9490-491f-9f7c-fbe6391d3e30
-create_qqplot(df.serum_chol, "QQ Plot of Serum Cholesterol")
-
-# ╔═╡ a6745162-4d48-452f-8a74-be8d61a7f0a2
-md"""
-## Feature Analysis: Fasting Blood Sugar > 120 mg/dL 
-"""
-
-# ╔═╡ a20d0fbe-ea0c-4d6d-9546-5103f7c1c132
-describe(df.fasting_blood_sugar)
-
-# ╔═╡ 56a570f5-d5cc-4204-b808-c5aef975838a
-create_binary_bar_plot(
-    data = df.fasting_blood_sugar, 
-    title_text = "Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
-    xlabel_text = "Fasting Blood Sugar",  # X-axis label
-    ylabel_text = "Count",       # Y-axis label
-    labels = ["Elevated", "Normal"]  # Labels for the binary categories
-)
-
-# ╔═╡ c1cf8e23-708d-469d-916b-4db839dccc2f
-md"""
-## Feature Analysis: Resting Electrocardiographic
-"""
-
-# ╔═╡ 66ca3fe7-82eb-4e7d-9222-f64f4955e56e
-describe(df.electrocardiographic)
-
-# ╔═╡ f915730f-56cc-4347-9e00-749a3071b149
-	create_bar_plot(
-    	data=df.electrocardiographic, 
-    	labels=["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"], 
-    	values_to_extract=[0, 1, 2], 
-    	plot_title="Resting Electrocardiographic Results Distribution", 
-    	xlabel_text="Electrocardiographic Type", 
-    	ylabel_text="Count"
-	)
-
-# ╔═╡ 5362ba76-bfb6-477e-bfc8-e776ed708e0e
-md"""
-## Feature Analysis: Angina with Exercise (exang)
-"""
-
-# ╔═╡ cb4f6884-0688-4a38-8e25-55347c0c5903
-describe(df.angina)
-
-# ╔═╡ c16373a7-037a-4fb6-89d4-f6d3bf779a29
-# Function call to create a percentage bar plot for df.angina
-create_binary_bar_plot(
-    data = df.angina, 
-    title_text = "Angina with Exercise Distribution (Percentage)",  # Title of the plot
-    xlabel_text = "Angina with Exercise",  # X-axis label
-    ylabel_text = "Percentage (%)",        # Y-axis label
-    labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
-)
-
-
-# ╔═╡ c2d385d6-5ca5-47e8-a679-cc3d10e6c51d
-md"""
-## Feature Analysis: Max Heart Rate
-"""
-
-# ╔═╡ 750c1095-2989-4986-b39a-f2cd448bb175
-describe(df.max_heart_rate)
-
-# ╔═╡ 04b3ee86-a65e-4398-93af-745864ab3ebc
-create_hist_density_plot(df.max_heart_rate, 
-                         "Max Heart Rate Distribution", 
-                         "Density Plot of Max Heart Rate", 
-                         "Max Heart Rate", 
-                         "Frequency", 
-                         "Max Heart Rate", 
-                         "Density")
-
-# ╔═╡ 7b9a00ac-47d5-44f9-a360-647e0a132e37
-# Combined Violin, Dot, and Box Plot for max_heart_rate
-create_combined_plot(df.max_heart_rate, 
-                     "Max Heart Rate Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Max Heart Rate")
-
-# ╔═╡ 98c37bbd-f106-426a-8b2d-5c81bf2ec4c9
-# QQ Plot for max_heart_rate
-create_qqplot(df.max_heart_rate, "QQ Plot of Max Heart Rate")
-
-# ╔═╡ f9b6d9d8-3abd-48ad-a385-ee97b67be387
-md"""
-## Feature Analysis: Oldpeak
-"""
-
-# ╔═╡ 7c0c8cd4-a6f3-40c0-bb4f-e34c6e590760
-describe(df.oldpeak)
-
-# ╔═╡ 079d5519-d64a-421b-8a8e-ee5da64f0600
-create_hist_density_plot(df.oldpeak, 
-                         "Oldspeak Distribution", 
-                         "Density Plot of Oldspeak", 
-                         "Oldspeak", 
-                         "Frequency", 
-                         "Oldspeak", 
-                         "Density"
-						)
-
-# ╔═╡ 769bc0e0-a54f-463f-a909-579a15316a87
-# Combined Violin, Dot, and Box Plot for oldpeak
-create_combined_plot(df.oldpeak, 
-                     "Oldpeak Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Oldpeak")
-
-# ╔═╡ a442e881-a1f6-4d6a-80ab-f268d1e03c16
-# QQ Plot for oldpeak
-create_qqplot(df.oldpeak, "QQ Plot of Oldpeak")
-
-# ╔═╡ 45ce1828-7079-4ac1-a17f-7d6571b190d7
-md"""
-## Feature Analysis: Slope
-"""
-
-# ╔═╡ 04a5ebb3-0106-4806-91ea-dc1517325953
-create_bar_plot(
-	data=df.slope, 
-    labels=["Upsloping", "Flat", "Downsloping"], 
-    values_to_extract=[1, 2, 3], 
-    plot_title="Slope of Peak Exercise ST Segment Distribution", 
-    xlabel_text="Slope Type", 
-    ylabel_text="Count"
-)
-
-# ╔═╡ 880f531e-1260-41ad-bcf2-18a008a5f957
-md"""
-## Feature Analysis: Major Vessels
-"""
-
-# ╔═╡ 8ceb6884-f710-4d72-96ec-314ee93643f5
-describe(df.major_vessels)
-
-# ╔═╡ 4048b1b6-90c1-49f0-8412-24c8400757e6
-df.major_vessels
-
-# ╔═╡ 66188fcc-44ea-414c-bc82-1be01738f5d6
-## TODO; need to convert major vessels to float
-
-# create_hist_density_plot(df.major_vessels, 
-#                          "Major Vessels Distribution", 
-#                          "Density Plot of Major Vessels", 
-#                          "Major Vessels", 
-#                          "Frequency", 
-#                          "Major Vessels", 
-#                          "Density", 4) # bins 5
-
-# ╔═╡ 6280cb26-646d-47aa-8b20-08e7b7d93ba0
-md"""
-## Feature Analysis: Thal
-"""
-
-# ╔═╡ cdfc5f74-eb28-4086-a23e-cb06ceba0a57
-describe(df.thal)
-
-# ╔═╡ da4c7dac-6a1d-4084-a933-7c21aa6f70a5
-df.thal
-
-# ╔═╡ 9402b7f0-54b8-45d7-bc20-27be2884a92a
-
-## TODO; need to convert thal to float
-# create_bar_plot(
-#     data=df.thal, 
-#     labels=["Normal", "Fixed Defect", "Reversible Defect"], 
-#     values_to_extract=[3, 6, 7], 
-#     plot_title="Thal Categories", 
-#     xlabel_text="Thal Type", 
-#     ylabel_text="Count"
-# )
+	scatter!(has_disease[1, :], has_disease[2, :], 
+    	marker=:circle, color=:red, label="Has Disease")
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -353,7 +119,9 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
@@ -362,7 +130,8 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 DataFrames = "~1.6.1"
 Distributions = "~0.25.111"
-Plots = "~1.40.5"
+MultivariateStats = "~0.10.3"
+Plots = "~1.40.7"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
 """
@@ -373,7 +142,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "73675cfcd7f131bf0f2eb909940652e905a4787e"
+project_hash = "c650903fd88e5022c368cae59e0dfcc3e723375b"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -763,10 +532,10 @@ uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "1.10.8"
 
 [[deps.HarfBuzz_jll]]
-deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
+deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll"]
+git-tree-sha1 = "401e4f3f30f43af2c8478fc008da50096ea5240f"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+1"
+version = "8.3.1+0"
 
 [[deps.HypergeometricFunctions]]
 deps = ["LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
@@ -824,9 +593,9 @@ version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
-git-tree-sha1 = "a53ebe394b71470c7f97c2e7e170d51df21b17af"
+git-tree-sha1 = "39d64b09147620f5ffbf6b2d3255be3c901bec63"
 uuid = "1019f520-868f-41f5-a6de-eb00f4b6a39c"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -1051,10 +820,10 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2023.1.10"
 
 [[deps.MultivariateStats]]
-deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
-git-tree-sha1 = "68bf5103e002c44adfd71fea6bd770b3f0586843"
+deps = ["Arpack", "Distributions", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
+git-tree-sha1 = "816620e3aac93e5b5359e4fdaf23ca4525b00ddf"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
-version = "0.10.2"
+version = "0.10.3"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1121,10 +890,10 @@ uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
 version = "0.5.5+0"
 
 [[deps.Opus_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "6703a85cb3781bd5909d48730a67205f3f31a575"
 uuid = "91d4177d-7536-5919-b921-800302f37372"
-version = "1.3.2+0"
+version = "1.3.3+0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "dfdf5519f235516220579f949664f1bf44e741c5"
@@ -1144,9 +913,9 @@ version = "0.11.31"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "cb5a2ab6763464ae0f19c86c56c63d4a2b0f5bda"
+git-tree-sha1 = "e127b609fb9ecba6f201ba7ab753d5a605d53801"
 uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
-version = "1.52.2+0"
+version = "1.54.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1184,9 +953,9 @@ version = "1.4.1"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "082f0c4b70c202c37784ce4bfbc33c9f437685bf"
+git-tree-sha1 = "f202a1ca4f6e165238d8175df63a7e26a51e04dc"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.5"
+version = "1.40.7"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1585,9 +1354,9 @@ version = "1.6.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "d9717ce3518dc68a99e6b96300813760d887a01d"
+git-tree-sha1 = "1165b0443d0eca63ac1e32b8c0eb69ed2f4f8127"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.13.1+0"
+version = "2.13.3+0"
 
 [[deps.XSLT_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
@@ -1764,9 +1533,9 @@ version = "3.2.9+0"
 
 [[deps.fzf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a68c9655fbe6dfcab3d972808f1aafec151ce3f8"
+git-tree-sha1 = "936081b536ae4aa65415d869287d43ef3cb576b2"
 uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
-version = "0.43.0+0"
+version = "0.53.0+0"
 
 [[deps.gperf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1781,10 +1550,10 @@ uuid = "a4ae2306-e953-59d6-aa16-d00cac43593b"
 version = "3.9.0+0"
 
 [[deps.libass_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "5982a94fcba20f02f42ace44b9894ee2b140fe47"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "e17c115d55c5fbb7e52ebedb427a0dca79d4484e"
 uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
-version = "0.15.1+0"
+version = "0.15.2+0"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1804,10 +1573,10 @@ uuid = "2db6ffa8-e38f-5e21-84af-90c45d0032cc"
 version = "1.11.0+0"
 
 [[deps.libfdk_aac_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "daacc84a041563f965be61859a36e17c4e4fcd55"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "8a22cf860a7d27e4f3498a0fe0811a7957badb38"
 uuid = "f638f0a6-7fb0-5443-88ba-1cc74229b280"
-version = "2.0.2+0"
+version = "2.0.3+0"
 
 [[deps.libinput_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "eudev_jll", "libevdev_jll", "mtdev_jll"]
@@ -1869,59 +1638,14 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-# ╠═956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-# ╠═366b8da3-eb10-4a43-abf6-ad1beb5d74b6
-# ╠═ed55cc30-d877-4289-bfaa-6200b2287f2b
-# ╠═525a0646-d2c5-4a1e-be73-ac4f8032171a
-# ╠═dccf5d92-d1a1-4f50-a27f-84b393f95323
-# ╠═24803bbf-7d98-4741-a99d-810812a25334
-# ╠═d81d784b-d417-4193-a2a2-6c72db0867e0
-# ╠═ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
-# ╠═7a319498-f455-4bad-b701-9c7842f2409e
-# ╠═f61d891e-6f86-4019-8c64-a821416010c3
-# ╠═401d0182-3c6a-4597-b618-4ddc94ec8ac1
-# ╠═96e6ec73-d165-421c-98dd-746b3a9d16e0
-# ╠═546a4301-90eb-48b2-8544-a49adb7bbb1f
-# ╠═a13ed2b2-a21b-4d60-975c-50e39aa2d10f
-# ╠═392572bf-7261-4ba1-9a55-7336f4c39de6
-# ╠═7e1cf2a8-d746-4e10-acce-4d1f18dc80ba
-# ╠═2e3bf110-607a-4d30-a7a4-a17725d8ddd9
-# ╠═8cf0d368-8f25-4a36-86db-69622dcc4772
-# ╠═d6ffc721-4493-4348-84b6-8ac3a6d33033
-# ╠═fe4fc731-af80-48f4-b1e1-2ee388192cf9
-# ╠═f2808383-89dc-45ad-bfcd-90e9131600aa
-# ╠═34387574-d4c7-48f7-98c3-9fe08e54e0be
-# ╠═63dac896-2cb2-41a9-b5d3-4fc6ec053675
-# ╠═c353cece-9490-491f-9f7c-fbe6391d3e30
-# ╠═a6745162-4d48-452f-8a74-be8d61a7f0a2
-# ╠═a20d0fbe-ea0c-4d6d-9546-5103f7c1c132
-# ╠═56a570f5-d5cc-4204-b808-c5aef975838a
-# ╠═c1cf8e23-708d-469d-916b-4db839dccc2f
-# ╠═66ca3fe7-82eb-4e7d-9222-f64f4955e56e
-# ╠═f915730f-56cc-4347-9e00-749a3071b149
-# ╠═5362ba76-bfb6-477e-bfc8-e776ed708e0e
-# ╠═cb4f6884-0688-4a38-8e25-55347c0c5903
-# ╠═c16373a7-037a-4fb6-89d4-f6d3bf779a29
-# ╠═c2d385d6-5ca5-47e8-a679-cc3d10e6c51d
-# ╠═750c1095-2989-4986-b39a-f2cd448bb175
-# ╠═04b3ee86-a65e-4398-93af-745864ab3ebc
-# ╠═7b9a00ac-47d5-44f9-a360-647e0a132e37
-# ╠═98c37bbd-f106-426a-8b2d-5c81bf2ec4c9
-# ╠═f9b6d9d8-3abd-48ad-a385-ee97b67be387
-# ╠═7c0c8cd4-a6f3-40c0-bb4f-e34c6e590760
-# ╠═079d5519-d64a-421b-8a8e-ee5da64f0600
-# ╠═769bc0e0-a54f-463f-a909-579a15316a87
-# ╠═a442e881-a1f6-4d6a-80ab-f268d1e03c16
-# ╠═45ce1828-7079-4ac1-a17f-7d6571b190d7
-# ╠═04a5ebb3-0106-4806-91ea-dc1517325953
-# ╠═880f531e-1260-41ad-bcf2-18a008a5f957
-# ╠═8ceb6884-f710-4d72-96ec-314ee93643f5
-# ╠═4048b1b6-90c1-49f0-8412-24c8400757e6
-# ╠═66188fcc-44ea-414c-bc82-1be01738f5d6
-# ╠═6280cb26-646d-47aa-8b20-08e7b7d93ba0
-# ╠═cdfc5f74-eb28-4086-a23e-cb06ceba0a57
-# ╠═da4c7dac-6a1d-4084-a933-7c21aa6f70a5
-# ╠═9402b7f0-54b8-45d7-bc20-27be2884a92a
+# ╠═3694d2d2-7fc9-11ef-3bbc-6bbe31477ffd
+# ╠═c9d7dd9e-33cf-4114-809a-1c5f4882c402
+# ╠═bdee5750-31b6-4ab7-a6c2-89c3084405d6
+# ╠═88742d02-416c-4c6a-bbdc-ab85e506ce53
+# ╠═bea5d3bb-46fc-482e-b558-0921d2c0a03a
+# ╠═8e74589a-ff12-48d5-853d-3ec88afc0045
+# ╠═ac3544a2-e7cb-41bd-8a86-9f7ab36634f3
+# ╠═5477db31-2191-4947-9d13-a0a5dddf1cbb
+# ╠═07b17748-a390-4645-8ac1-c6a31f0712d1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
