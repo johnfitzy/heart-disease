@@ -174,6 +174,9 @@ md"""
 ## Feature Analysis: Chest Pain
 """
 
+# ╔═╡ ce90bd00-69a2-4d7e-a96d-875a6eac6b7d
+describe(df.chest_pain)
+
 # ╔═╡ b280a319-cfa7-4b79-8a7e-7805d9dcf808
 md"""
 ##### Comments on Chest Paint feature:
@@ -337,17 +340,14 @@ md"""
 """
 
 # ╔═╡ 26dde9f9-ad73-454c-b475-dfc09894f400
-begin
-	# Function call to create a percentage bar plot for df.angina
-	create_binary_bar_plot(
-    	data = df.angina, 
-    	title_text = "Angina with Exercise Distribution (Percentage)",  # Title of the plot
-    	xlabel_text = "Angina with Exercise",  # X-axis label
-    	ylabel_text = "Percentage (%)",        # Y-axis label
-    	labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
-	)
-
-end
+# Function call to create a percentage bar plot for df.angina
+create_binary_bar_plot(
+	data = df.angina, 
+    title_text = "Angina with Exercise Distribution (Percentage)", #Title of the plot
+    xlabel_text = "Angina with Exercise",  # X-axis label
+    ylabel_text = "Percentage (%)",        # Y-axis label
+    labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
+)
 
 # ╔═╡ 53503b2d-e4c7-4570-8262-20e8ffb50156
 md"""
@@ -377,7 +377,6 @@ create_hist_density_plot(df.max_heart_rate,
                          "Frequency", 
                          "Max Heart Rate", 
                          "Density")
-
 
 # ╔═╡ 26f71e4e-34df-44a6-89e3-e2e40db03cf7
 # Combined Violin, Dot, and Box Plot for max_heart_rate
@@ -436,6 +435,9 @@ md"""
 ## Feature Analysis: Slope
 """
 
+# ╔═╡ d6c1628b-d144-4cd1-95d1-9ae7dd7e5d39
+describe(df.slope)
+
 # ╔═╡ 9d3c1583-eac0-4d38-9a86-d7db17865b6f
 md"""
 ##### Comments on Slope feature:
@@ -460,6 +462,9 @@ end
 md"""
 ## Feature Analysis: Major Vessels
 """
+
+# ╔═╡ 704e6473-b07d-45a9-bf72-394da0ccdefe
+df.major_vessels
 
 # ╔═╡ c5056e29-9545-4a94-bc65-6d9fd562424e
 describe(df.major_vessels)
@@ -2054,61 +2059,64 @@ version = "1.4.1+1"
 # ╟─e804fdc5-cca9-4912-8c51-d39accde1d3f
 # ╟─35fa6501-bd25-44ef-baca-f5bf27d55820
 # ╟─24dc537e-6786-40e2-9305-a21dbe11d305
-# ╟─f834790d-2ff3-42a7-9570-2bdf8526d0d4
+# ╠═f834790d-2ff3-42a7-9570-2bdf8526d0d4
 # ╟─1847271c-13d1-40e9-8510-5df10c8d3387
-# ╟─e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
-# ╟─69956da7-2ec9-446f-b820-9918cb7f7a2a
+# ╠═e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
+# ╠═69956da7-2ec9-446f-b820-9918cb7f7a2a
 # ╠═ea135519-5c1c-4133-96af-4217ce2e8125
 # ╟─11cb6c44-506c-4261-a07d-27a6bdd3a7ea
-# ╟─004da6e2-b821-4096-b2e9-5f2ab5dc079e
-# ╟─d374d9b1-dcad-44a2-9020-ddeb669e435c
+# ╠═004da6e2-b821-4096-b2e9-5f2ab5dc079e
+# ╠═d374d9b1-dcad-44a2-9020-ddeb669e435c
 # ╠═90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
-# ╟─95398b93-4809-4339-afa8-d653dd1b52db
+# ╠═95398b93-4809-4339-afa8-d653dd1b52db
+# ╠═ce90bd00-69a2-4d7e-a96d-875a6eac6b7d
 # ╟─b280a319-cfa7-4b79-8a7e-7805d9dcf808
 # ╠═126128d5-8690-4cf0-abab-0a58229ef111
-# ╟─16748bd6-6f85-48cf-8043-c3ab2c8abbb9
+# ╠═16748bd6-6f85-48cf-8043-c3ab2c8abbb9
 # ╠═ffe1d39f-37b7-440e-befd-b31cc696fee3
 # ╟─06b8a523-96c1-48a5-88bb-1b5a112e92fd
-# ╟─face61a1-a2d3-4700-a886-184cfb19700a
-# ╟─fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
+# ╠═face61a1-a2d3-4700-a886-184cfb19700a
+# ╠═fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
 # ╠═718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
-# ╟─17fe2f69-2610-431f-af05-434e5ec1e6ef
+# ╠═17fe2f69-2610-431f-af05-434e5ec1e6ef
 # ╠═7d50fa1c-77b2-4a48-b825-1c3664684f42
 # ╟─b22b3bb3-ea6b-41e5-bd74-62f5145c4416
 # ╠═9113278a-604c-44fc-a51a-610c4ce37064
 # ╠═aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
 # ╠═f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
-# ╟─d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
+# ╠═d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
 # ╟─76b2416d-fd48-4189-842b-157ebea1ed97
 # ╟─84a429d3-653b-4572-8458-b534dd415899
-# ╟─c84c8d42-152d-4e6e-bf06-099774678e50
-# ╟─6760f6ec-0f99-4ef6-9752-3bcb46150955
-# ╟─32fe8106-97ed-4a48-8980-e221a0ea79fb
+# ╠═c84c8d42-152d-4e6e-bf06-099774678e50
+# ╠═6760f6ec-0f99-4ef6-9752-3bcb46150955
+# ╠═32fe8106-97ed-4a48-8980-e221a0ea79fb
 # ╟─9d893067-18be-4982-9b42-f18de0a0ed5f
 # ╠═26dde9f9-ad73-454c-b475-dfc09894f400
-# ╟─53503b2d-e4c7-4570-8262-20e8ffb50156
+# ╠═53503b2d-e4c7-4570-8262-20e8ffb50156
 # ╠═aa772ca5-cedd-4805-add7-0404048b6e2e
 # ╟─bfc09914-c84d-4e70-8ef3-57e201c74b96
-# ╟─7eb478b5-6103-44af-bd28-48e5f2fd9080
-# ╟─26f71e4e-34df-44a6-89e3-e2e40db03cf7
-# ╟─bc4edeec-229e-48e5-b29a-a6bafb8040c2
-# ╟─579c4514-ae8e-4321-9aef-6977f2dacba2
+# ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
+# ╠═26f71e4e-34df-44a6-89e3-e2e40db03cf7
+# ╠═bc4edeec-229e-48e5-b29a-a6bafb8040c2
+# ╠═579c4514-ae8e-4321-9aef-6977f2dacba2
 # ╠═80f1f0c8-d4b8-4d49-a532-d73a477046c7
 # ╟─5dd78dbc-5e34-4c03-bd9a-f6c1de673106
-# ╟─a4701191-219f-4c3f-97f4-8dc4b35dd410
-# ╟─a407201e-5260-49ea-b48f-376b1714169b
+# ╠═a4701191-219f-4c3f-97f4-8dc4b35dd410
+# ╠═a407201e-5260-49ea-b48f-376b1714169b
 # ╠═67400cd2-9892-4502-a5de-19fdecd9598a
-# ╟─027d26f8-5177-4be1-b333-a7810792c6e7
+# ╠═027d26f8-5177-4be1-b333-a7810792c6e7
+# ╠═d6c1628b-d144-4cd1-95d1-9ae7dd7e5d39
 # ╟─9d3c1583-eac0-4d38-9a86-d7db17865b6f
-# ╟─4d50430f-1fa0-4eee-8cf1-ef81e56f7402
+# ╠═4d50430f-1fa0-4eee-8cf1-ef81e56f7402
 # ╠═064e0ac4-7458-4a19-8e12-0395eb92a654
+# ╠═704e6473-b07d-45a9-bf72-394da0ccdefe
 # ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
 # ╟─f044966e-132e-4539-acc7-09e009b9ad4d
-# ╟─6cf11a9a-a837-457d-8649-afbdf8926304
+# ╠═6cf11a9a-a837-457d-8649-afbdf8926304
 # ╟─34809859-74e2-410b-b623-6212def3cc53
 # ╟─591b6955-22d5-4b30-9cc6-c2fa57adbc92
-# ╟─ea52f75b-8893-41c1-b53b-0b706dc1f56a
+# ╠═ea52f75b-8893-41c1-b53b-0b706dc1f56a
 # ╟─a060652c-9af9-4377-acd5-11b357529aca
-# ╟─b908bc5c-c63d-4f00-9471-28eb51cc59fa
+# ╠═b908bc5c-c63d-4f00-9471-28eb51cc59fa
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
