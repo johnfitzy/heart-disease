@@ -5,7 +5,10 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 3694d2d2-7fc9-11ef-3bbc-6bbe31477ffd
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats
+using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats, Distances, Clustering
+
+# ╔═╡ e945d004-4650-45fd-a31b-186ca8f9fbde
+using ManifoldLearning
 
 # ╔═╡ c9d7dd9e-33cf-4114-809a-1c5f4882c402
 begin
@@ -113,12 +116,148 @@ begin
     	marker=:circle, color=:red, label="Has Disease")
 end
 
+# ╔═╡ bddd101f-eff5-4a39-b551-dc0160f8243a
+Y_pca = Y_test  # Use the principal components from your PCA
+
+# ╔═╡ a136bfc0-6827-4b1b-81be-f06b544674ab
+#do kmeans clustering on y_teset
+begin
+
+
+	scs = []  # To store silhouette scores
+
+	# Calculate pairwise distances between the data points
+	dists = pairwise(Euclidean(), Y_pca)
+	
+	# Iterate over a range of cluster numbers (k) to compute silhouette scores
+	for k in 2:10
+    	R = kmeans(Y_pca, k; maxiter=100)  # Perform K-means clustering
+    	memb = R.assignments  # Get the cluster assignments for each point
+    	push!(scs, mean(silhouettes(memb, dists)))  # Calculate and store the mean 	silhouette score
+end
+
+	# Plot the silhouette scores for different values of k
+	plot(2:10, scs, label="Avg Silhouette Score", xlabel="k", ylabel="Silhouette Score", title="Silhouette Scores for Different k")
+
+end
+
+# ╔═╡ bdb81f8d-3d9b-4f00-b2a7-11a41a9543b3
+begin
+	
+	R = kmeans(Y_pca, 2; maxiter=100)
+
+	# Assuming Y_pca is 2D for plotting PC1 and PC2
+	assignments = R.assignments  # Get cluster assignments
+
+	# Assuming you have multiple clusters in `assignments`
+	num_clusters = length(unique(assignments))  # Get the number of clusters
+	cluster_colors = distinguishable_colors(num_clusters)  # Generate enough colors for all clusters
+
+	# Create a scatter plot for PC1 vs PC2, coloring points based on cluster assignment
+	StatsPlots.scatter(Y_pca[1, :], Y_pca[2, :], 
+        group=assignments, 
+        legend=false, 
+        xlabel="PC1", 
+        ylabel="PC2", 
+        color=cluster_colors, 
+        title="PCA Clustering Plot (KMeans)")
+
+
+
+end
+
+# ╔═╡ aae31359-087d-4f38-94b4-dfbeae6024ad
+md""" To get a proper range for possible $\epsilon$ values, we generate a histogram of the mutual distance values. It centers around 2.1: """
+
+# ╔═╡ 029a0d7e-74b4-4738-aba8-f32bc3b26b07
+density(dists[:], label="pairwise Eucl.", xlabel="Distance", ylabel="Density", title="Density Plot")
+
+
+# ╔═╡ 6632b2cd-6344-4d7c-86b2-f583b1db74db
+begin
+
+
+ 	db_res = dbscan(dists, 2.2, 30);
+    println("no. of clusters:", nclusters(db_res))
+end
+
+# ╔═╡ 4df7d8f1-4320-4388-9ea7-a8ed56be5bba
+begin
+	
+	M1=ManifoldLearning.fit(TSNE, X1, p=50)
+	tsne_prj1 = predict(M1)
+	M2=ManifoldLearning.fit(TSNE, X1, p=250)
+	tsne_prj2 = predict(M2)
+
+end
+
+# ╔═╡ 8d74f069-382b-4fa4-8b3c-3bf46093f59b
+begin
+
+tsp1 = scatter(
+    tsne_prj1[1, :], tsne_prj1[2, :],
+    label = "",
+    title = "t-SNE, Perp=50",
+    alpha = 0.3,
+    # c = assignments,  # Color by membership or cluster labels
+    hover = string.(1:size(tsne_prj1, 2))
+)
+	
+
+end
+
+# ╔═╡ 22edb909-edd2-4fb3-981d-f8b914dd1bcc
+begin
+tsp2 = scatter(
+    tsne_prj2[1, :], tsne_prj2[2, :],
+    label = "",
+    title = "t-SNE, Perp=250",
+    alpha = 0.3,
+    # c = membs,  # Color by membership or cluster labels
+    hover = string.(1:size(tsne_prj2, 2))
+)
+end
+
+# ╔═╡ 332559d1-b28f-4af8-a7fb-37524bfc9114
+begin
+
+	# Perform KMeans clustering on the t-SNE projection
+	R1 = kmeans(tsne_prj2, 2; maxiter=100)
+
+	# Get the cluster assignments from the KMeans result
+	assignments1 = R1.assignments  # Get cluster assignments
+
+	# Determine the number of clusters
+	num_clusters1 = length(unique(assignments1))  # Get the number of clusters
+	cluster_colors1 = distinguishable_colors(num_clusters1)  # Generate enough colors for all clusters
+
+	# Create a scatter plot for t-SNE (Dim1 vs Dim2), coloring points based on cluster assignment
+	StatsPlots.scatter(tsne_prj2[1, :], tsne_prj2[2, :], 
+    	group=assignments1, 
+    	legend=false, 
+    	xlabel="t-SNE Dimension 1", 
+    	ylabel="t-SNE Dimension 2", 
+    	color=cluster_colors1, 
+    	title="t-SNE Clustering Plot (KMeans, Perplexity=50)")
+
+
+end
+
+# ╔═╡ 435d24c3-f5d8-402b-ae4a-c838870d0db3
+size(assignments)
+
+# ╔═╡ 83b4b9cf-8c66-46b3-aa2e-49a87b05a49a
+Y_test
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ManifoldLearning = "06eb3307-b2af-5a2a-abea-d33192699d32"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -128,11 +267,14 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 CSV = "~0.10.14"
+Clustering = "~0.15.7"
 DataFrames = "~1.6.1"
+Distances = "~0.10.11"
 Distributions = "~0.25.111"
-MultivariateStats = "~0.10.3"
-Plots = "~1.40.7"
-StatsBase = "~0.34.3"
+ManifoldLearning = "~0.9.0"
+MultivariateStats = "~0.9.0"
+Plots = "~1.40.8"
+StatsBase = "~0.33.21"
 StatsPlots = "~0.15.7"
 """
 
@@ -142,7 +284,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "c650903fd88e5022c368cae59e0dfcc3e723375b"
+project_hash = "38fd038176f46651adab93bf1b2131f8a5c301b9"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -174,6 +316,12 @@ version = "1.1.3"
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
+
+[[deps.ArnoldiMethod]]
+deps = ["LinearAlgebra", "Random", "StaticArrays"]
+git-tree-sha1 = "d57bd3762d308bded22c3b82d033bff85f6195c6"
+uuid = "ec485272-7323-5ecc-a04f-4719b315124d"
+version = "0.4.0"
 
 [[deps.Arpack]]
 deps = ["Arpack_jll", "Libdl", "LinearAlgebra", "Logging"]
@@ -271,6 +419,11 @@ deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
 git-tree-sha1 = "362a287c3aa50601b0bc359053d5c2468f0e7ce0"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.11"
+
+[[deps.Combinatorics]]
+git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
+uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+version = "1.0.2"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
@@ -520,6 +673,12 @@ git-tree-sha1 = "344bf40dcab1073aca04aa0df4fb092f920e4011"
 uuid = "3b182d85-2403-5c21-9c21-1e1f0cc25472"
 version = "1.3.14+0"
 
+[[deps.Graphs]]
+deps = ["ArnoldiMethod", "Compat", "DataStructures", "Distributed", "Inflate", "LinearAlgebra", "Random", "SharedArrays", "SimpleTraits", "SparseArrays", "Statistics"]
+git-tree-sha1 = "ebd18c326fa6cee1efb7da9a3b45cf69da2ed4d9"
+uuid = "86223c79-3864-5bf0-83f7-82e725a168b6"
+version = "1.11.2"
+
 [[deps.Grisu]]
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
 uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
@@ -543,6 +702,11 @@ git-tree-sha1 = "7c4195be1649ae622304031ed46a2f4df989f1eb"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.24"
 
+[[deps.Inflate]]
+git-tree-sha1 = "d1b1b796e47d94588b3757fe84fbf65a5ec4a80d"
+uuid = "d25df0c9-e2be-5dd7-82c8-3ad0b3e990b9"
+version = "0.1.5"
+
 [[deps.InlineStrings]]
 git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
 uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
@@ -557,10 +721,10 @@ version = "1.4.2"
     Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 
 [[deps.IntelOpenMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "14eb2b542e748570b56446f4c50fbfb2306ebc45"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
+git-tree-sha1 = "10bd689145d2c3b2a9844005d01087cc1194e79e"
 uuid = "1d5cc7b8-4909-519e-a0f8-d0f5ad9712d0"
-version = "2024.2.0+0"
+version = "2024.2.1+0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -635,9 +799,9 @@ version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e16271d212accd09d52ee0ae98956b8a05c4b626"
+git-tree-sha1 = "78211fb6cbc872f77cad3fc0b6cf647d923f4929"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "17.0.6+0"
+version = "18.1.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -786,6 +950,12 @@ git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.13"
 
+[[deps.ManifoldLearning]]
+deps = ["Combinatorics", "Graphs", "LinearAlgebra", "MultivariateStats", "Random", "SparseArrays", "Statistics", "StatsAPI"]
+git-tree-sha1 = "4c5564c707899c3b6bc6d324b05e43eb7f277f2b"
+uuid = "06eb3307-b2af-5a2a-abea-d33192699d32"
+version = "0.9.0"
+
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -820,10 +990,10 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2023.1.10"
 
 [[deps.MultivariateStats]]
-deps = ["Arpack", "Distributions", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
-git-tree-sha1 = "816620e3aac93e5b5359e4fdaf23ca4525b00ddf"
+deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsBase"]
+git-tree-sha1 = "6d019f5a0465522bbfdd68ecfad7f86b535d6935"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
-version = "0.10.3"
+version = "0.9.0"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -953,9 +1123,9 @@ version = "1.4.1"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "f202a1ca4f6e165238d8175df63a7e26a51e04dc"
+git-tree-sha1 = "45470145863035bb124ca51b320ed35d071cc6c2"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.7"
+version = "1.40.8"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1133,6 +1303,12 @@ git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
 version = "1.1.0"
 
+[[deps.SimpleTraits]]
+deps = ["InteractiveUtils", "MacroTools"]
+git-tree-sha1 = "5d7e3f4e11935503d3ecaf7186eac40602e7d231"
+uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
+version = "0.9.4"
+
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
@@ -1186,9 +1362,9 @@ version = "1.7.0"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
+git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.3"
+version = "0.33.21"
 
 [[deps.StatsFuns]]
 deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
@@ -1647,5 +1823,18 @@ version = "1.4.1+1"
 # ╠═ac3544a2-e7cb-41bd-8a86-9f7ab36634f3
 # ╠═5477db31-2191-4947-9d13-a0a5dddf1cbb
 # ╠═07b17748-a390-4645-8ac1-c6a31f0712d1
+# ╠═bddd101f-eff5-4a39-b551-dc0160f8243a
+# ╠═a136bfc0-6827-4b1b-81be-f06b544674ab
+# ╠═bdb81f8d-3d9b-4f00-b2a7-11a41a9543b3
+# ╠═aae31359-087d-4f38-94b4-dfbeae6024ad
+# ╠═029a0d7e-74b4-4738-aba8-f32bc3b26b07
+# ╠═6632b2cd-6344-4d7c-86b2-f583b1db74db
+# ╠═e945d004-4650-45fd-a31b-186ca8f9fbde
+# ╠═4df7d8f1-4320-4388-9ea7-a8ed56be5bba
+# ╠═8d74f069-382b-4fa4-8b3c-3bf46093f59b
+# ╠═22edb909-edd2-4fb3-981d-f8b914dd1bcc
+# ╠═332559d1-b28f-4af8-a7fb-37524bfc9114
+# ╠═435d24c3-f5d8-402b-ae4a-c838870d0db3
+# ╠═83b4b9cf-8c66-46b3-aa2e-49a87b05a49a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
