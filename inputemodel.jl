@@ -4,37 +4,16 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 67248250-80d5-11ef-3f17-e59ced2d6e2f
-using CSV, DataFrames, LinearAlgebra, Plots, Statistics, StatsBase, StatsPlots, PlutoUI ,Clustering, Distances, MultivariateStats, HypothesisTests, Distributions, GLM, DelimitedFiles
+# ╔═╡ 90f38830-810a-11ef-0e1c-c73d0a0e2627
+using CSV, DataFrames, LinearAlgebra, Plots, Statistics, StatsBase, StatsPlots,Clustering, Distances, MultivariateStats, HypothesisTests, Distributions, GLM, MLJModels, MLJ
 
-# ╔═╡ 5074d382-916f-45f2-b162-25168a8467c7
-#using impute.jl here to try out to impute this dataset
-using Impute
-
-# ╔═╡ 9468797c-808b-4235-97e4-9e6792bb4886
-using MLJModels, MLJ
-
-# ╔═╡ fb69ca3f-7736-4e57-b480-0c4d555709da
-include("plotting_functions.jl")
-
-# ╔═╡ 7a6f6b42-9d94-491b-95d3-d3c1e9f40962
+# ╔═╡ 0f090deb-7474-407e-a38b-30f801133068
 md"""
+# Using MLJModel.FillImputer
+- Test against the processed.cleveland.data dataset where it is missing 6 values"""
 
-# Processed.Hungarian.data - Imputed with mean chain imputation (test) and MLJModel.FillInputer
-
-- heart disease catergorised as binary 0 or 1
-- 293 rows x 14 = 4102 data points
-- missing 779 values.
-- 18% missing values
-"""
-
-# ╔═╡ b7c8bb92-442f-4306-a343-d4fb74092c1c
-df1 =CSV.read("processed.hungarian.data", DataFrame)
-
-# ╔═╡ 25355125-ef7b-4401-8184-31f78fe0cf01
-describe(df1)
-
-# ╔═╡ 59837273-573c-4aa9-8fd7-0d2631a99c92
+# ╔═╡ 4a2a4dc6-acb1-46a7-838b-bcb2ff21e853
+begin
 	column_names = [
     	"age", 
     	"sex", 
@@ -51,20 +30,32 @@ describe(df1)
     	"thal", 
     	"heartdis"
 	]
+dftr= CSV.read("heart.dat", DataFrame)
+rename!(dftr, names(dftr) .=> column_names)
+end
 
-# ╔═╡ 3c226ad3-560c-40cb-abe6-ec746f652c29
-rename!(df1, names(df1) .=> column_names)
+# ╔═╡ 2d959533-55c2-49d9-9294-93bd310b8d24
+begin
+imputer = FillImputer()
+mach = machine(imputer, dftr) 
+fit!(mach)
+end
 
-# ╔═╡ a7026ea0-aa70-457c-a07c-c27a18e9d9ed
-df1
 
-# ╔═╡ 485c3eed-282e-4dfc-8d61-a944eb6463ac
-#this is to describe the missing values
+# ╔═╡ 6e788b9d-baeb-48e0-8a0f-0090cb43efe4
+begin
+dfte= CSV.read("processed.cleveland.data", DataFrame)
+rename!(dfte, names(dfte) .=> column_names)
+end
 
+# ╔═╡ f8815c17-998b-4302-b2ce-ce3a67ddbaef
+describe(dfte)
+
+# ╔═╡ adef4b17-7305-417e-a66a-1d4b4d479362
 begin
 positions = Dict()
-for col in names(df1)
-    positions[col] = findall(x -> x == "?", df1[!, col])
+for col in names(dfte)
+    positions[col] = findall(x -> x == "?", dfte[!, col])
 end
 
 println("Positions of '?' characters: ", positions)
@@ -74,236 +65,62 @@ total_question_marks = sum(length, values(positions))
 println("Total number of '?' characters: ", total_question_marks)
 end
 
-# ╔═╡ 215fafec-15a2-4e93-b449-0556630ebf47
+# ╔═╡ 52ad17cf-8b6d-4f5d-a40c-0445e1544ce1
 begin
-for col in names(df1)
-    if eltype(df1[!, col]) <: AbstractString
-        df1[!, col] = convert(Vector{Union{String, Missing}}, df1[!, col])
+for col in names(dfte)
+    if eltype(dfte[!, col]) <: AbstractString
+        dfte[!, col] = convert(Vector{Union{String, Missing}}, dfte[!, col])
     end
 end
 
 # Replace "?" with missing
-for col in eachcol(df1)
+for col in eachcol(dfte)
     replace!(col, "?" => missing)
 end
 end
 
-# ╔═╡ 84490848-3800-4352-aaa1-f9845eb6f55c
-function convert_to_float!(df1::DataFrame)
-    for col in names(df1)
-        df1[!, col] = passmissing(x -> parse(Float64, string(x))).(df1[!, col])
+# ╔═╡ 903cf688-46a0-414c-9ec6-cdf89fbc0df9
+dfte
+
+# ╔═╡ 6eb300af-8475-4a91-b238-4c1b8d6d6551
+begin
+function convert_to_float!(dfte::DataFrame)
+    for col in names(dfte)
+        dfte[!, col] = passmissing(x -> parse(Float64, string(x))).(dfte[!, col])
     end
 end
-
-# ╔═╡ 8b020b32-2ceb-44eb-a1ed-8bce3c89abb7
-convert_to_float!(df1)
-
-# ╔═╡ 7fdc39bb-c50a-4405-bbcc-45a5df86daf0
-df1
-
-# ╔═╡ f93fb96b-4fea-4154-b84d-0112d7d5c7ed
-# this method uses mean imputation
-begin
-Impute.interp(df1)	
-df_imp1= Impute.interp(df1) |> Impute.locf() |> Impute.nocb()
+convert_to_float!(dfte)
 end
 
-# ╔═╡ 5f247850-e5c9-4fa8-a946-1c5363712ea5
-describe(df_imp1)
+# ╔═╡ 33660708-e439-483f-af82-5013a6844be5
+describe(dfte)
 
-# ╔═╡ f89fd6b0-d75b-452a-927e-561330c9c911
-df_imp1
+# ╔═╡ 3265f22c-4c69-44cd-a3d6-bbe42844112c
+dfte
 
-# ╔═╡ 9b7af595-ed4e-4e0a-9af6-21e98cebbc10
-
-#i thought this is not bad, the distribution followed the shape ok
-begin
-	
-histogram(df1.chol, title="Original Data - Chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(df_imp1.chol, label="Imputed", alpha=0.5)
-
-end
-
-# ╔═╡ 5ceb3f01-a7da-4a4e-8a0a-267ddb7ce0d1
-#this is a bad imputation due to lack of reference in the dataset, i think only one row has value, while all others are missing
-
-begin
-histogram(df1.ca, title="Original Data - ca (vessels)", label="Original", alpha=0.5, legend=:topright)
-histogram!(df_imp1.ca, label="Imputed", alpha=0.5)
-end
-
-# ╔═╡ 370d868a-4b87-4724-8a4c-73871eed899f
-md"""
-for the ca:
-this is probably the worse imputation, because of the mean imputation method
-"""
-
-# ╔═╡ 56d71753-c27f-4b51-a88a-c6ab79a5df32
-#not sure with this one, it does follow the bumps on the histo
-begin
-histogram(df1.slop, title="Original Data - slop", label="Original", alpha=0.5, legend=:topright)
-histogram!(df_imp1.slop, label="Imputed", alpha=0.5)
-end
-
-# ╔═╡ fda987b3-7bd2-4ba2-827c-8e2ab0218943
-#again, not much existing values to follow i think
-begin
-histogram(df1.thal, title="Original Data - thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(df_imp1.thal, label="Imputed", alpha=0.5)
-end
-
-# ╔═╡ 5186f565-ab7a-4448-82f7-0d2183b849b8
-md"""
-## Statistical test on original data and mean imputated data
-
-1. T-Test: only the ca (vessels) rejected the hypothesis: statistically different between datasets.
-- *Others were not statistically different*
-
-"""
-
-# ╔═╡ 9dd3b829-05b1-43b8-9982-0368a283edbc
-
-for col in names(df1)
-    original_data = collect(skipmissing(df1[!, col]))
-    imputed_data = collect(skipmissing(df_imp1[!, col]))
-    if length(original_data) > 1 && length(imputed_data) > 1
-        t_test_result = EqualVarianceTTest(original_data, imputed_data)
-		
-		pval= round(pvalue(t_test_result), sigdigits=3)
-        println("T-test result for $col:")
-		println(t_test_result)
-    end
-end
-
-# ╔═╡ 2eeb85c3-4621-4faf-bca8-42198cf5f7d5
-md""" 
-# Impute using MLJModel.FillImputer
-"""
-
-# ╔═╡ 54809a97-f438-4736-aaea-9efc0694d7e6
-# Using original dataset to train
-begin
-dftr= CSV.read("heart.dat", DataFrame)
-rename!(dftr, names(dftr) .=> column_names)
-end
-
-# ╔═╡ 74279774-8210-4586-b5f2-a0d951a696b6
-#start by creating a model using the complete cleveland dataset
-begin
-imputer = FillImputer()
-mach = machine(imputer, dftr) 
-fit!(mach)
-end
-
-
-# ╔═╡ cff1e2de-b0cc-43f5-b987-e1af4e63a27f
-mach
-
-# ╔═╡ 7e51d0f7-7070-4e3f-8704-1fe310c06c00
-MLJ.schema(df1)
-
-# ╔═╡ dc3d850e-9bea-4b9f-95ce-01e7ae9de7af
-#this is to change the heart disease into a Int64 from  Float64. It doesnt work if the scitype of training and testin dataset do not match.
-
-begin
-dfte=df1 #'testing  set to be inputed'
+# ╔═╡ f36a9171-fd93-42e7-90cd-1e00d65dfbd5
 dfte.heartdis = trunc.(Int64, dfte.heartdis)
-end
 
-# ╔═╡ 10c29ad7-4c81-4ba5-85db-1c6a68385208
-describe(df1)
-# you can see here the number of nmissing. Its quite significant, particularly the ca attribute 98% missing.
+# ╔═╡ 8c3ca599-4da2-45e5-b256-32497a553f9c
+dfte
 
-# ╔═╡ 041866b1-fc37-472e-ae01-aeaf5ddc77a1
-#here using the model to impute the dataset
-dfteNew=MLJ.transform(mach,dfte)
+# ╔═╡ 566b9195-2410-49bc-99d4-0aa2a41a7a5b
+dfteNew= MLJ.transform(mach, dfte)
 
-# ╔═╡ b7db1579-d08c-4ebe-912a-50d45f7b8df1
+# ╔═╡ a5a3d157-9d2d-4c37-a5df-48ee9b1dcd22
 describe(dfteNew)
-#here to see now there are no missing data in this new imputed set
 
-# ╔═╡ b858e89a-5bd5-4079-b5d0-ee8514971747
-md"""
-Comparing histograms on all the attributes with missing values, comparing the mean chain inputation versus the MLJModel.FillImputer
-
-- I believe that the chol, slop, thal improved but "ca" about the same due to few data points to impute from.
-"""
-
-
-# ╔═╡ 7765d11a-7950-4329-b6d8-6fcb11917b6f
+# ╔═╡ e17489b7-dc49-462e-bacc-5ba3b05ca365
 begin
-histo= []	
-subplot1=histogram(df1.chol, title="Original Vs Imputed - Chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplot1, df_imp1.chol, label="Chain Imputed", alpha=0.5)
-
-subplot2= histogram(df1.chol, title="Original Vs Imputed - Chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplot2, dfteNew.chol, label="FillImputed", alpha=0.5)
-push!(histo, subplot1, subplot2)
-plot((histo...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8) 
+histogram(dfte.ca, title="Original Data - Ca", label="Original", alpha=0.5, legend=:topright)
+histogram!(dfteNew.ca, label="Imputed", alpha=0.5)
 end
 
-# ╔═╡ 583fc0ab-2391-44ac-9779-8597f5b4d4aa
-
-histogram(dftr.ca, title="Original Data - ca", label="Original") 
-
-
-# ╔═╡ f688349f-3251-47c7-a18e-26a0fc57d679
+# ╔═╡ fe999cfa-b303-4141-967b-f8f3185fe0f2
 begin
-histo_ca= []	
-subplotca1=histogram(df1.ca, title="Original Vs Imputed - Ca Vessels", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotca1, df_imp1.ca, label="Chain Imputed", alpha=0.5)
-
-subplotca2= histogram(df1.ca, title="Original Vs Imputed - Ca Vessels", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotca2, dfteNew.ca, label="FillImputed", alpha=0.5)
-push!(histo_ca, subplotca1, subplotca2)
-plot((histo_ca...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8) 
+histogram(dfte.thal, title="Original Data - Thal", label="Original", alpha=0.5, legend=:topright)
+histogram!(dfteNew.thal, label="Imputed", alpha=0.5)
 end
-
-# ╔═╡ d6b5d77a-a2bf-462a-a3ab-34e4c2f39132
-begin
-histo_thal= []	
-subplotthal1=histogram(df1.thal, title="Original Vs Imputed- thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotthal1, df_imp1.thal, label="Chain Imputed", alpha=0.5)
-
-subplotthal2= histogram(df1.thal, title="Original Vs Imputed- thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotthal2, dfteNew.thal, label="FillImputed", alpha=0.5)
-push!(histo_thal, subplotthal1, subplotthal2)
-
-plot((histo_thal...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8)
-end
-
-
-
-# ╔═╡ 49b7e5a7-d7ab-4062-9c86-c26c4da1eb4b
-begin
-histo_slop= []	
-subplotslop1=histogram(df1.slop, title="Original Data - slop", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotslop1, df_imp1.slop, label="Chain Imputed", alpha=0.5)
-
-subplotslop2= histogram(df1.slop, title="Original Data - thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotslop2, dfteNew.thal, label="FillImputed", alpha=0.5)
-push!(histo_slop, subplotslop1, subplotslop2)
-
-plot((histo_slop...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8)
-end
-
-# ╔═╡ 6ab458e3-9365-4104-8aef-f331643a8a2d
-for col in names(df1)
-    original_data = collect(skipmissing(df1[!, col]))
-    imputed_data = collect(skipmissing(dfteNew[!, col]))
-    if length(original_data) > 1 && length(imputed_data) > 1
-        t_test_result = EqualVarianceTTest(original_data, imputed_data)
-		
-		pval= round(pvalue(t_test_result), sigdigits=3)
-        println("T-test result for $col:")
-		println(t_test_result)
-    end
-end
-
-# ╔═╡ be016c8d-75e8-48d6-abbf-540383f2e9ce
-md"""
-In this method, the t-test rejected the null hypothesis for ca, slop and thal, which means that the new imputation for these attributes are statiscally different from the original dataframe.
-"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -311,18 +128,15 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
-Impute = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJModels = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
@@ -331,17 +145,14 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 Clustering = "~0.15.7"
 DataFrames = "~1.6.1"
-DelimitedFiles = "~1.9.1"
 Distances = "~0.10.11"
 Distributions = "~0.25.111"
 GLM = "~1.8.3"
 HypothesisTests = "~0.11.2"
-Impute = "~0.6.12"
 MLJ = "~0.19.5"
 MLJModels = "~0.16.10"
 MultivariateStats = "~0.10.3"
 Plots = "~1.40.7"
-PlutoUI = "~0.7.60"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
 """
@@ -352,7 +163,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "6962500ee68f8e748b0f3672a7e4ba689c6f6e0f"
+project_hash = "7ff3409f3686d9da610e830384fd10c26e1447bf"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -370,12 +181,6 @@ weakdeps = ["ChainRulesCore", "Test"]
     [deps.AbstractFFTs.extensions]
     AbstractFFTsChainRulesCoreExt = "ChainRulesCore"
     AbstractFFTsTestExt = "Test"
-
-[[deps.AbstractPlutoDingetjes]]
-deps = ["Pkg"]
-git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
-uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.2"
 
 [[deps.Accessors]]
 deps = ["CompositionsBase", "ConstructionBase", "InverseFunctions", "LinearAlgebra", "MacroTools", "Markdown"]
@@ -442,11 +247,6 @@ deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
 git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.1.0"
-
-[[deps.BSON]]
-git-tree-sha1 = "4c3e506685c527ac6a54ccc0c8c76fd6f91b42fb"
-uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
-version = "0.3.9"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -628,12 +428,6 @@ version = "4.1.1"
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
-
-[[deps.DataDeps]]
-deps = ["HTTP", "Libdl", "Reexport", "SHA", "Scratch", "p7zip_jll"]
-git-tree-sha1 = "8ae085b71c462c2cb1cfedcb10c3c877ec6cf03f"
-uuid = "124859b0-ceae-595e-8997-d05f6a7a8dfe"
-version = "0.7.13"
 
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
@@ -882,35 +676,11 @@ git-tree-sha1 = "7c4195be1649ae622304031ed46a2f4df989f1eb"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.24"
 
-[[deps.Hyperscript]]
-deps = ["Test"]
-git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
-uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
-version = "0.0.5"
-
-[[deps.HypertextLiteral]]
-deps = ["Tricks"]
-git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
-uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
-version = "0.9.5"
-
 [[deps.HypothesisTests]]
 deps = ["Combinatorics", "Distributions", "LinearAlgebra", "Printf", "Random", "Rmath", "Roots", "Statistics", "StatsAPI", "StatsBase"]
 git-tree-sha1 = "35235811ebde579eb0d4eb9f89cc8fc3c31d103d"
 uuid = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 version = "0.11.2"
-
-[[deps.IOCapture]]
-deps = ["Logging", "Random"]
-git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
-uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.5"
-
-[[deps.Impute]]
-deps = ["BSON", "CSV", "DataDeps", "Distances", "IterTools", "LinearAlgebra", "Missings", "NamedDims", "NearestNeighbors", "Random", "Statistics", "StatsBase", "TableOperations", "Tables"]
-git-tree-sha1 = "ec5ca28d28bf8c807f1f8f9db885037ae660c89d"
-uuid = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
-version = "0.6.12"
 
 [[deps.InlineStrings]]
 git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
@@ -964,11 +734,6 @@ version = "1.3.0"
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.2"
-
-[[deps.IterTools]]
-git-tree-sha1 = "42d5f897009e7ff2cf88db414a389e5ed1bdd023"
-uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
-version = "1.10.0"
 
 [[deps.IterationControl]]
 deps = ["EarlyStopping", "InteractiveUtils"]
@@ -1180,11 +945,6 @@ weakdeps = ["CategoricalArrays"]
     [deps.LossFunctions.extensions]
     LossFunctionsCategoricalArraysExt = "CategoricalArrays"
 
-[[deps.MIMEs]]
-git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
-uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
-version = "0.1.4"
-
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
 git-tree-sha1 = "f046ccd0c6db2832a9f639e2c669c6fe867e5f4f"
@@ -1295,25 +1055,6 @@ deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
-
-[[deps.NamedDims]]
-deps = ["LinearAlgebra", "Pkg", "Statistics"]
-git-tree-sha1 = "90178dc801073728b8b2d0d8677d10909feb94d8"
-uuid = "356022a1-0364-5f58-8944-0da4b18d706f"
-version = "1.2.2"
-
-    [deps.NamedDims.extensions]
-    AbstractFFTsExt = "AbstractFFTs"
-    ChainRulesCoreExt = "ChainRulesCore"
-    CovarianceEstimationExt = "CovarianceEstimation"
-    TrackerExt = "Tracker"
-
-    [deps.NamedDims.weakdeps]
-    AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    CovarianceEstimation = "587fd27a-f159-11e8-2dae-1979310e6154"
-    Requires = "ae029012-a4dd-5104-9daa-d747884805df"
-    Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
 [[deps.NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
@@ -1466,12 +1207,6 @@ version = "1.40.7"
     IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-
-[[deps.PlutoUI]]
-deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
-uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.60"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1836,11 +1571,6 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 git-tree-sha1 = "e84b3a11b9bece70d14cce63406bbc79ed3464d2"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.11.2"
-
-[[deps.Tricks]]
-git-tree-sha1 = "7822b97e99a1672bfb1b49b668a6d46d58d8cbcb"
-uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.9"
 
 [[deps.URIs]]
 git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
@@ -2214,47 +1944,23 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─7a6f6b42-9d94-491b-95d3-d3c1e9f40962
-# ╠═67248250-80d5-11ef-3f17-e59ced2d6e2f
-# ╠═fb69ca3f-7736-4e57-b480-0c4d555709da
-# ╠═b7c8bb92-442f-4306-a343-d4fb74092c1c
-# ╠═25355125-ef7b-4401-8184-31f78fe0cf01
-# ╟─59837273-573c-4aa9-8fd7-0d2631a99c92
-# ╠═3c226ad3-560c-40cb-abe6-ec746f652c29
-# ╠═a7026ea0-aa70-457c-a07c-c27a18e9d9ed
-# ╠═485c3eed-282e-4dfc-8d61-a944eb6463ac
-# ╠═215fafec-15a2-4e93-b449-0556630ebf47
-# ╠═5074d382-916f-45f2-b162-25168a8467c7
-# ╠═84490848-3800-4352-aaa1-f9845eb6f55c
-# ╠═8b020b32-2ceb-44eb-a1ed-8bce3c89abb7
-# ╠═7fdc39bb-c50a-4405-bbcc-45a5df86daf0
-# ╠═f93fb96b-4fea-4154-b84d-0112d7d5c7ed
-# ╠═5f247850-e5c9-4fa8-a946-1c5363712ea5
-# ╠═f89fd6b0-d75b-452a-927e-561330c9c911
-# ╠═9b7af595-ed4e-4e0a-9af6-21e98cebbc10
-# ╠═5ceb3f01-a7da-4a4e-8a0a-267ddb7ce0d1
-# ╟─370d868a-4b87-4724-8a4c-73871eed899f
-# ╠═56d71753-c27f-4b51-a88a-c6ab79a5df32
-# ╠═fda987b3-7bd2-4ba2-827c-8e2ab0218943
-# ╟─5186f565-ab7a-4448-82f7-0d2183b849b8
-# ╠═9dd3b829-05b1-43b8-9982-0368a283edbc
-# ╠═9468797c-808b-4235-97e4-9e6792bb4886
-# ╟─2eeb85c3-4621-4faf-bca8-42198cf5f7d5
-# ╠═54809a97-f438-4736-aaea-9efc0694d7e6
-# ╠═74279774-8210-4586-b5f2-a0d951a696b6
-# ╠═cff1e2de-b0cc-43f5-b987-e1af4e63a27f
-# ╠═7e51d0f7-7070-4e3f-8704-1fe310c06c00
-# ╠═dc3d850e-9bea-4b9f-95ce-01e7ae9de7af
-# ╠═10c29ad7-4c81-4ba5-85db-1c6a68385208
-# ╠═041866b1-fc37-472e-ae01-aeaf5ddc77a1
-# ╠═b7db1579-d08c-4ebe-912a-50d45f7b8df1
-# ╟─b858e89a-5bd5-4079-b5d0-ee8514971747
-# ╟─7765d11a-7950-4329-b6d8-6fcb11917b6f
-# ╟─583fc0ab-2391-44ac-9779-8597f5b4d4aa
-# ╟─f688349f-3251-47c7-a18e-26a0fc57d679
-# ╟─d6b5d77a-a2bf-462a-a3ab-34e4c2f39132
-# ╟─49b7e5a7-d7ab-4062-9c86-c26c4da1eb4b
-# ╟─6ab458e3-9365-4104-8aef-f331643a8a2d
-# ╟─be016c8d-75e8-48d6-abbf-540383f2e9ce
+# ╟─0f090deb-7474-407e-a38b-30f801133068
+# ╠═90f38830-810a-11ef-0e1c-c73d0a0e2627
+# ╟─4a2a4dc6-acb1-46a7-838b-bcb2ff21e853
+# ╠═2d959533-55c2-49d9-9294-93bd310b8d24
+# ╠═6e788b9d-baeb-48e0-8a0f-0090cb43efe4
+# ╠═f8815c17-998b-4302-b2ce-ce3a67ddbaef
+# ╠═adef4b17-7305-417e-a66a-1d4b4d479362
+# ╠═52ad17cf-8b6d-4f5d-a40c-0445e1544ce1
+# ╠═903cf688-46a0-414c-9ec6-cdf89fbc0df9
+# ╠═6eb300af-8475-4a91-b238-4c1b8d6d6551
+# ╠═33660708-e439-483f-af82-5013a6844be5
+# ╠═3265f22c-4c69-44cd-a3d6-bbe42844112c
+# ╠═f36a9171-fd93-42e7-90cd-1e00d65dfbd5
+# ╠═8c3ca599-4da2-45e5-b256-32497a553f9c
+# ╠═566b9195-2410-49bc-99d4-0aa2a41a7a5b
+# ╠═a5a3d157-9d2d-4c37-a5df-48ee9b1dcd22
+# ╠═e17489b7-dc49-462e-bacc-5ba3b05ca365
+# ╠═fe999cfa-b303-4141-967b-f8f3185fe0f2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
