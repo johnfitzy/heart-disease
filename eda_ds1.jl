@@ -1,11 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.19.44
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ 92a554a2-ff53-477b-8ccf-4a178ee01672
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats, Random, MLUtils
+using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats, Random, MLUtils, HypothesisTests
 
 # ╔═╡ f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
 include("src/plotting_functions.jl")
@@ -587,7 +587,7 @@ md"""
 
 ###### General
 
-- There appears to be a loose seperation of points with and without heart disease which may indicate an inherate differenece between the two classes in terms of features. 
+- There appears to be a loose separation of points with and without heart disease which may indicate an inherate differenece between the two classes in terms of features. 
 - The loose sepeartion seems to be mostly along PC1 and probably indicates the features with the highest loadings in PC1 are resposible for the majority of the difference between the two classes
 - The dataset started with 13 features/dimentions and the PCA reduced it to 2 PCA's
 - A principal ratio of ~0.3665 indicates that the first two principal components combined explain ~36.65% of the total variance in the original data.
@@ -606,12 +606,143 @@ These are often the top 3 contributors to the variance captured in the 2 PCA's
 - Age: Also strongly contributes to PC2 in a positive direction.
 """
 
+# ╔═╡ a7b566ab-16f6-4ae4-8340-3e6d3a155215
+md"""
+# Correlations:
+- Explore the correlations of each attribute against the presence of heart disease
+
+-> Correlation Matrix
+
+-> Biserial Correlation Test
+
+-> Chi-Square Test
+"""
+
+# ╔═╡ 2f2b1b7f-05a0-449a-bc29-0d2204fdd2f6
+md"""
+# Correlation Matrix
+"""
+
+# ╔═╡ 1d746ebb-03db-4bfb-a10b-ffc0a2a3b124
+begin
+var_names= names(df)	
+correlation_matrix = cor(Matrix(df[:, 1:end]))
+heatmap(correlation_matrix,title="Correlation Matrix", size= (900, 750), xtickfontsize=6, xlabel="Attributes", xticks=(1:14, var_names), xrot=45, yticks=1:14, label="Attributes")
+end
+
+# ╔═╡ 97587d11-3cab-47d8-bd6f-779195da40a5
+md""" Based on the correlation heatmap, there is a strong negative correlation effect of attribute number 8= maximum heart rate to those attributes after 8. 
+
+- note that those with maximum HR achieved, less likely to have heart disease, less likely to have angina during exercise, less likely to have narrowed vessels.
+- age/sex/chest/angina history is positively correlated with vessel related attributes.
+- also noted the upper right quadrant are more positively correlated with each other such as angina during exercise, ST depression at exercise, downsloping ST, more than 1 narrowed vessels, thalaesemia value. These seem to correlate being diagnosed with heart disease"""
+
+# ╔═╡ 284be63b-61e9-45f9-8bde-0a654107d0eb
+md"""
+# Biserial Correlation Tests
+- This is to compare correlation between continuous variables against binary target (heart_disease)
+"""
+
+# ╔═╡ 1ebd13e2-dd4a-4bdc-b5de-c1aefe1cac26
+replace!(df.heart_disease, 1 => 0, 2 => 1)
+
+# ╔═╡ cb332288-3b87-4dd7-8041-d1caea555879
+continuous_var = ["age", "rest_bp", "serum_chol", "max_heart_rate", "oldpeak"]
+
+# ╔═╡ ec4cc343-7bbc-4824-ab1f-9d19629331ed
+categorical_var = select(df, Not(continuous_var))
+
+# ╔═╡ be317312-cf38-4171-b2da-3d1282179088
+begin
+biserial_data=[]	
+function biserial_correlation(continuous_var, binary_var)
+    M1 = mean(continuous_var[binary_var .== 1])
+    M0 = mean(continuous_var[binary_var .== 0])
+    S = std(continuous_var)
+    p = mean(binary_var)
+    q = 1 - p
+    φ = pdf(Normal(), quantile(Normal(), p))
+    r_pb = (M1 - M0) / S * sqrt(p * q) / φ
+
+	r_pb = round(r_pb, digits=4)
+	
+	return r_pb
+end
+# Loop through each continuous variable and calculate biserial correlation
+for var in continuous_var
+    continuous_data = df[!, var]
+    binary_data = df.heart_disease
+    correlation = biserial_correlation(continuous_data, binary_data)
+    push!(biserial_data, correlation)
+	println("Biserial Correlation between heartdis and $var: ", correlation)
+	
+end
+end
+
+# ╔═╡ dbc582ea-d72c-498b-8cb4-0d19b6d87458
+begin
+bar_chart = bar(biserial_data, xticks= (1:5, continuous_var), titlefontsize=10, title= "Biserial Correlation between Heart Disease and Continuous Attributes", legend = :none)
+end
+
+# ╔═╡ 36b9e359-c861-43fc-9a87-19e30afd5b24
+md"""
+Based on the above findings on biserial correlation calculations of continuous attributes:
+
+- There is a moderate positive correlation for age with heart disease diagnosis (i.e., with increasing age, there is increase risk of diagnosis of heart disease)
+
+- There is a mild relative positive correlation for cholesterol levels with heart disease diagnosis (i.e., with increasing cholesterol levels, there is increase risk of diagnosis of heart disease)
+
+- There is a strong positive correlation for oldpeak (this represents ST depression induced by exercise) with heart disease diagnosis (i.e., with increasing cholesterol levels, there is increase risk of diagnosis of heart disease)
+
+- There is a strong negative correlation for maxhr (this represents max) with heart disease diagnosis (i.e., with increasing max heart rate, there is decrease risk of diagnosis of heart disease)
+	"""
+
+# ╔═╡ 9f9c29a9-5213-4547-8c67-be914a39be15
+begin
+categorical_col = [:sex, :chest_pain,:fasting_blood_sugar, :electrocardiographic	,:angina, :slope,:major_vessels,:thal]
+hd_col= :heart_disease
+chqtest = DataFrame(variable=String[], statistic=Float64[], pvalue=Float64[])
+for col in categorical_col
+    # Create a contingency table
+    contingency_table = combine(groupby(df, [col, hd_col]), nrow => :count)
+    
+    # Convert the contingency table to a matrix
+    observed = DataFrames.unstack(contingency_table, col, hd_col, :count) |> Matrix
+
+	observed = convert(Matrix{Int}, observed)
+    # Perform the Chi-Square test
+    chi_square_test = ChisqTest(observed)
+	cqt_val= round(chi_square_test.stat, digits=3)
+	pvaluect= round(pvalue(chi_square_test), sigdigits=3)
+    
+    # Print the results with p-values
+	push!(chqtest, (string(col), cqt_val, pvaluect))
+    println("Chi-Square test for $col:")
+    println("Test Statistic: ", cqt_val)
+	println("P-value:", pvaluect)
+    println()
+end
+end
+
+# ╔═╡ bd12b86d-01fe-454a-b1af-05b3bc7f8754
+chqtest
+
+# ╔═╡ cb7d9e99-c183-42b0-a345-69d4a89416e7
+bar(chqtest.variable, chqtest.statistic, legend=false, title="Chi-Square Test Statistics", xlabel="Variable", xrot=45, ylabel="Test Statistic")
+
+# ╔═╡ 3baed477-300c-491f-b88c-64427f8f42a6
+md"""
+The above is a Chi-square analysis of all the categorical data against the heart disease target. Based on the findings, all except fasting blood sugar levels are statiscally significant. In other words, sex (i.e. male), history of chest pain, abnormal resting ecg, angina during exercise, downsloping of ST segment, increase in narrowing vessels, higher thal value are contributing risk factors for presence of heart disease.
+- As part of the EDA, these categorical features could be used as features in developing predictive modelling for diagnosis for heart disease.
+"""
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
@@ -624,6 +755,7 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 DataFrames = "~1.6.1"
 Distributions = "~0.25.111"
+HypothesisTests = "~0.11.2"
 MLUtils = "~0.4.4"
 MultivariateStats = "~0.10.3"
 Plots = "~1.40.5"
@@ -637,7 +769,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "6eea21b3b97576490c87b7654693bc08e29fcd2d"
+project_hash = "54b1c018df71e708a4fe506ff3cdbd33e8d339b9"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -834,6 +966,16 @@ deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
 git-tree-sha1 = "362a287c3aa50601b0bc359053d5c2468f0e7ce0"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.11"
+
+[[deps.Combinatorics]]
+git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
+uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+version = "1.0.2"
+
+[[deps.CommonSolve]]
+git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
+uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+version = "0.2.4"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
@@ -1158,6 +1300,12 @@ deps = ["LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
 git-tree-sha1 = "7c4195be1649ae622304031ed46a2f4df989f1eb"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.24"
+
+[[deps.HypothesisTests]]
+deps = ["Combinatorics", "Distributions", "LinearAlgebra", "Printf", "Random", "Rmath", "Roots", "Statistics", "StatsAPI", "StatsBase"]
+git-tree-sha1 = "35235811ebde579eb0d4eb9f89cc8fc3c31d103d"
+uuid = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
+version = "0.11.2"
 
 [[deps.InitialValues]]
 git-tree-sha1 = "4da0f88e9a39111c2fa3add390ab15f3a44f3ca3"
@@ -1820,6 +1968,26 @@ git-tree-sha1 = "58cdd8fb2201a6267e1db87ff148dd6c1dbd8ad8"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.5.1+0"
 
+[[deps.Roots]]
+deps = ["Accessors", "CommonSolve", "Printf"]
+git-tree-sha1 = "3a7c7e5c3f015415637f5debdf8a674aa2c979c4"
+uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+version = "2.2.1"
+
+    [deps.Roots.extensions]
+    RootsChainRulesCoreExt = "ChainRulesCore"
+    RootsForwardDiffExt = "ForwardDiff"
+    RootsIntervalRootFindingExt = "IntervalRootFinding"
+    RootsSymPyExt = "SymPy"
+    RootsSymPyPythonCallExt = "SymPyPythonCall"
+
+    [deps.Roots.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+    SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
+    SymPyPythonCall = "bc8888f7-b21e-4b7c-a06a-5d9c9496438c"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
@@ -2477,7 +2645,22 @@ version = "1.4.1+1"
 # ╟─7518ed7e-9f45-4cdc-b1d4-6fa6cf30b609
 # ╠═75ec9e54-15ae-40f1-b249-caccc583af99
 # ╠═601d2031-8b6f-481a-8e2a-e5a3af97878a
-# ╟─fdf5f45c-43db-4813-adac-242b554fe9af
+# ╠═fdf5f45c-43db-4813-adac-242b554fe9af
 # ╟─11f9c8f5-e0ef-4dc0-82b0-17e20ecc88c5
+# ╟─a7b566ab-16f6-4ae4-8340-3e6d3a155215
+# ╟─2f2b1b7f-05a0-449a-bc29-0d2204fdd2f6
+# ╠═1d746ebb-03db-4bfb-a10b-ffc0a2a3b124
+# ╟─97587d11-3cab-47d8-bd6f-779195da40a5
+# ╟─284be63b-61e9-45f9-8bde-0a654107d0eb
+# ╠═1ebd13e2-dd4a-4bdc-b5de-c1aefe1cac26
+# ╠═cb332288-3b87-4dd7-8041-d1caea555879
+# ╠═ec4cc343-7bbc-4824-ab1f-9d19629331ed
+# ╟─be317312-cf38-4171-b2da-3d1282179088
+# ╟─dbc582ea-d72c-498b-8cb4-0d19b6d87458
+# ╟─36b9e359-c861-43fc-9a87-19e30afd5b24
+# ╟─9f9c29a9-5213-4547-8c67-be914a39be15
+# ╠═bd12b86d-01fe-454a-b1af-05b3bc7f8754
+# ╟─cb7d9e99-c183-42b0-a345-69d4a89416e7
+# ╟─3baed477-300c-491f-b88c-64427f8f42a6
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
