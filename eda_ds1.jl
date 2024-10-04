@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.44
+# v0.19.46
 
 using Markdown
 using InteractiveUtils
@@ -543,22 +543,21 @@ begin
 	
 	X1 = standardize(ZScoreTransform, X, dims=2)
 
-	# Split into training and test sets with labels
-	(X1_train, labels_train), (X1_test, labels_test) = splitobs((X1, labels); at=0.7, shuffle=true)
+	# # Split into training and test sets with labels
+	# (X1_train, labels_train), (X1_test, labels_test) = splitobs((X1, labels); at=0.7, shuffle=true)
 
 end
 
 # ╔═╡ 601d2031-8b6f-481a-8e2a-e5a3af97878a
-M = fit(PCA, X1_train; maxoutdim=2)	
+M = fit(PCA, X1; maxoutdim=2)	
 
 # ╔═╡ fdf5f45c-43db-4813-adac-242b554fe9af
 begin
 	# Predict to get outputs from X1_test
-	Y1_test = predict(M, X1_test)
+	Y = predict(M, X1)
 	
-	no_disease = Y1_test[:, labels_test .== 1]
-	has_disease = Y1_test[:, labels_test .== 2]
-
+	no_disease = Y[:, labels .== 0]
+	has_disease = Y[:, labels .== 1]
 
 	# Plot points from reduced dims with no disease
 	scatter(no_disease[1, :], 
