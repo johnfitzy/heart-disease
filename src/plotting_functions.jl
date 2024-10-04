@@ -26,9 +26,6 @@ function create_combined_plot(
     # Create the violin plot
     violin([data], legend=false, xticks=:none)
 
-    # Overlay the dot plot
-    dotplot!(data, legend=false, xticks=:none)
-
     # Overlay the box plot
     boxplot!(data, legend=false, xticks=:none)  # Removes x-axis values
 
