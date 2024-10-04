@@ -1,763 +1,158 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.19.44
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 92a554a2-ff53-477b-8ccf-4a178ee01672
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, MultivariateStats, Random, MLUtils, HypothesisTests
+# ╔═╡ 90f38830-810a-11ef-0e1c-c73d0a0e2627
+using CSV, DataFrames, LinearAlgebra, Plots, Statistics, StatsBase, StatsPlots,Clustering, Distances, MultivariateStats, HypothesisTests, Distributions, GLM, MLJModels, MLJ
 
-# ╔═╡ f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
-include("src/plotting_functions.jl")
-
-# ╔═╡ f298fb92-9015-4de9-942e-11206ae80183
+# ╔═╡ 0f090deb-7474-407e-a38b-30f801133068
 md"""
-| Variable Name           | Role    | Type         | Description                                                      |
-|-------------------------|---------|--------------|------------------------------------------------------------------|
-| age                     | Feature | Continuous   | Age                                                              |
-| sex                     | Feature | Binary       | Sex                                                              |
-| chest-pain              | Feature | Categorical  | Chest pain type                                                  |
-| rest-bp                 | Feature | Continuous   | Resting blood pressure                                           |
-| serum-chol              | Feature | Continuous   | Serum cholesterol (mg/dl)                                        |
-| fasting-blood-sugar     | Feature | Binary       | Fasting blood sugar > 120 mg/dl                                  |
-| electrocardiographic    | Feature | Categorical  | Resting electrocardiographic results                             |
-| max-heart-rate          | Feature | Continuous   | Maximum heart rate achieved                                      |
-| angina                  | Feature | Binary       | Exercise induced angina                                          |
-| oldpeak                 | Feature | Continuous   | ST depression induced by exercise relative to rest               |
-| slope                   | Feature | Integer      | The slope of the peak exercise ST segment                        |
-| major-vessels           | Feature | Continuous   | Number of major vessels (0-3) colored by fluoroscopy             |
-| thal                    | Feature | Categorical  | Thal: 3 = normal; 6 = fixed defect; 7 = reversible defect        |
-| heart-disease           | Target  | Integer      | Diagnosis of heart disease                                       |
+# Using MLJModel.FillImputer
+- Test against the processed.cleveland.data dataset where it is missing 6 values"""
 
-"""
-
-# ╔═╡ a174259c-5822-4aa1-b162-d07deef886af
+# ╔═╡ 4a2a4dc6-acb1-46a7-838b-bcb2ff21e853
 begin
-	
-	# Define the column names
 	column_names = [
     	"age", 
     	"sex", 
-    	"chest_pain", 
-    	"rest_bp", 
-    	"serum_chol", 
-	    "fasting_blood_sugar", 
-		"electrocardiographic", 
-	 	"max_heart_rate", 
-   	 	"angina", 
+    	"cp", 
+    	"trestbps", 
+    	"chol", 
+	    "fbs", 
+		"restecg", 
+	 	"maxhr", 
+   	 	"exang", 
     	"oldpeak", 
-    	"slope", 
-    	"major_vessels", 
+    	"slop", 
+    	"ca", 
     	"thal", 
-    	"heart_disease"
+    	"heartdis"
 	]
-
-	# Open file as CSV
-	df = CSV.read("data/DS1/heart.dat", 
-		delim=' ', 
-		header=column_names,
-		DataFrame) 
-
+dftr= CSV.read("heart.dat", DataFrame)
+rename!(dftr, names(dftr) .=> column_names)
 end
 
-# ╔═╡ d6c8603b-569f-4c02-a3fb-3d0e74bbf638
-describe(df)
-
-# ╔═╡ e804fdc5-cca9-4912-8c51-d39accde1d3f
-md"""
-## Part One Ideas
-
-NOTE: just hear as some ideas delete later
-
-1. Understand the Data Distribution
-
-- Descriptive Statistics: Calculate summary statistics (mean, median, standard deviation, min, max, etc.) for each attribute to understand the range and central tendencies.
-
-- Distribution Plots: Use histograms or density plots for continuous variables (e.g., age, rest-bp, serum-chol, max-heart-rate, oldpeak) to visualize their distributions.
-
-- Box Plots: Create box plots to identify outliers in continuous variables. This can help you detect anomalies or extreme values.
-
-"""
-
-# ╔═╡ 35fa6501-bd25-44ef-baca-f5bf27d55820
-md"""
-# Part One: Exploratory Data Analysis
-"""
-
-# ╔═╡ 24dc537e-6786-40e2-9305-a21dbe11d305
-md"""
-
-## Data Sneak Peak
-| age  | sex  | chest_pain | rest_bp | serum_chol | fasting_blood_sugar | electrocardiographic | max_heart_rate | angina | oldpeak | slope | major_vessels | thal | heart_disease |
-|------|------|------------|---------|------------|---------------------|----------------------|----------------|--------|---------|-------|---------------|------|---------------|
-| 70.0 | 1.0  | 4.0        | 130.0   | 322.0      | 0.0                 | 2.0                  | 109.0          | 0.0    | 2.4     | 2.0   | 3.0           | 3.0  | 2             |
-| 67.0 | 0.0  | 3.0        | 115.0   | 564.0      | 0.0                 | 2.0                  | 160.0          | 0.0    | 1.6     | 2.0   | 0.0           | 7.0  | 1             |
-| 57.0 | 1.0  | 2.0        | 124.0   | 261.0      | 0.0                 | 0.0                  | 141.0          | 0.0    | 0.3     | 1.0   | 0.0           | 7.0  | 2             |
-
-From the above we can see some initial properties of the data
-1) Features are Categorical, Continuous and Binary types
-2) Many of the features are in different scales
-
-
-"""
-
-# ╔═╡ f834790d-2ff3-42a7-9570-2bdf8526d0d4
-md"""
-### Feature Analysis: Sex
-"""
-
-# ╔═╡ 1847271c-13d1-40e9-8510-5df10c8d3387
-md"""
-###### Comments:
-- 67.8 % are male
-- 32.2 % are female
-"""
-
-# ╔═╡ e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
+# ╔═╡ 2d959533-55c2-49d9-9294-93bd310b8d24
 begin
-	create_binary_bar_plot(
-		data=df.sex, 
-		title_text="Sex Distribution (Percentage)",
-		xlabel_text="Sex",
-		ylabel_text="Count",
-		labels=["Male", "Female"]		
-	)
+imputer = FillImputer()
+mach = machine(imputer, dftr) 
+fit!(mach)
 end
 
-# ╔═╡ 69956da7-2ec9-446f-b820-9918cb7f7a2a
-md"""
-### Feature Analysis: Age
-"""
 
-# ╔═╡ ea135519-5c1c-4133-96af-4217ce2e8125
-describe(df.age)
-
-# ╔═╡ 11cb6c44-506c-4261-a07d-27a6bdd3a7ea
-md"""
-
-##### Comments on Age feature:
-- The age data closely follows a normal distribution, as shown by the QQ Plot, although there are some outliers at the tails, indicating deviations at the extremes of the age spectrum.
-- The violin plot suggests a slight negative skew, with a tendency toward older individuals, implying that ages above the mean are slightly more prevalent.
-- A noticeable bump around the 40-45 year range suggests a local concentration of data points, which may reflect a particular subgroup or trend within the data.
-- The standard deviation of 9.109067 is about 16.7% of the mean (54.433333), indicating moderate variability. This suggests that while there is some spread in the ages, most data points remain relatively close to the mean, reflecting a reasonably consistent age distribution with moderate dispersion.
-- The proximity of the median (55) to the mean further supports the observation of a near-symmetrical distribution, despite the slight skew and presence of outliers.
-
-"""
-
-# ╔═╡ 004da6e2-b821-4096-b2e9-5f2ab5dc079e
+# ╔═╡ 6e788b9d-baeb-48e0-8a0f-0090cb43efe4
 begin
-	create_hist_density_plot(df.age, 
-    	"Age Distribution", 
-        "Density Plot of Age", 
-        "Age", 
-    	"Frequency", 
-        "Age", 
-        "Density"
-	)
+dfte= CSV.read("processed.cleveland.data", DataFrame)
+rename!(dfte, names(dfte) .=> column_names)
 end
 
-# ╔═╡ d374d9b1-dcad-44a2-9020-ddeb669e435c
+# ╔═╡ f8815c17-998b-4302-b2ce-ce3a67ddbaef
+describe(dfte)
+
+# ╔═╡ adef4b17-7305-417e-a66a-1d4b4d479362
 begin
-	# Plot violin dot and box plot for age
-	create_combined_plot(df.age, "Age Violin, Dot and Box Plot", "Frequency", "Age")
-
+positions = Dict()
+for col in names(dfte)
+    positions[col] = findall(x -> x == "?", dfte[!, col])
 end
 
-# ╔═╡ 90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
+println("Positions of '?' characters: ", positions)
+
+# Count the total number of "?" characters
+total_question_marks = sum(length, values(positions))
+println("Total number of '?' characters: ", total_question_marks)
+end
+
+# ╔═╡ 52ad17cf-8b6d-4f5d-a40c-0445e1544ce1
 begin
-	# Plot QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.age, "QQ Plot of Age")
+for col in names(dfte)
+    if eltype(dfte[!, col]) <: AbstractString
+        dfte[!, col] = convert(Vector{Union{String, Missing}}, dfte[!, col])
+    end
 end
 
-# ╔═╡ 95398b93-4809-4339-afa8-d653dd1b52db
-md"""
-### Feature Analysis: Chest Pain
-"""
+# Replace "?" with missing
+for col in eachcol(dfte)
+    replace!(col, "?" => missing)
+end
+end
 
-# ╔═╡ ce90bd00-69a2-4d7e-a96d-875a6eac6b7d
-describe(df.chest_pain)
+# ╔═╡ 903cf688-46a0-414c-9ec6-cdf89fbc0df9
+dfte
 
-# ╔═╡ b280a319-cfa7-4b79-8a7e-7805d9dcf808
-md"""
-##### Comments on Chest Paint feature:
-- Typical Angina 7.4%
-- Atypical Angina 15.6%
-- Non-Anginal Pain 29.3%
-- Asymptomatic 47.8%
-"""
-
-# ╔═╡ 126128d5-8690-4cf0-abab-0a58229ef111
+# ╔═╡ 6eb300af-8475-4a91-b238-4c1b8d6d6551
 begin
-	create_bar_plot(
-    	data=df.chest_pain, 
-    	labels=["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"],
-    	values_to_extract=[1, 2, 3, 4], 
-    	plot_title="Chest Pain Distribution", 
-    	xlabel_text="Chest Pain Type", 
-    	ylabel_text="Count"
-	)
+function convert_to_float!(dfte::DataFrame)
+    for col in names(dfte)
+        dfte[!, col] = passmissing(x -> parse(Float64, string(x))).(dfte[!, col])
+    end
+end
+convert_to_float!(dfte)
 end
 
-# ╔═╡ 16748bd6-6f85-48cf-8043-c3ab2c8abbb9
-md"""
-## Feature Analysis: Resting Blood Presure	
-"""
+# ╔═╡ 33660708-e439-483f-af82-5013a6844be5
+describe(dfte)
 
-# ╔═╡ ffe1d39f-37b7-440e-befd-b31cc696fee3
-describe(df.rest_bp	)
+# ╔═╡ 3265f22c-4c69-44cd-a3d6-bbe42844112c
+dfte
 
-# ╔═╡ 06b8a523-96c1-48a5-88bb-1b5a112e92fd
-md"""
-##### Comments on Resting Blood Pressure feature:
-- The probability distribution is somewhat close to a normal distribution but exhibits a slight positive skew, with lower blood pressure readings being more frequent and a longer right tail indicating higher values.
-- The data contains several outliers, with some very high readings indicating elevated blood pressure and a few low outliers. These extremes suggest the presence of individuals with unusual resting blood pressure levels, both high and low.
-- The standard deviation of 17.861608 is about 13.6% of the mean (131.344444), indicating moderate variability relative to the mean. This suggests that the data points are relatively close to the mean, reflecting a reasonably tight distribution compared to the overall scale of blood pressure values.
-- The median (130) is close to the mean, which indicates a reasonably symmetric central tendency, despite the presence of skew and outliers.
-- The interquartile range (120 to 140) captures the middle 50% of the data, showing a typical range of resting blood pressure values that are relatively close to the average, supporting the observation of moderate variability.
-"""
+# ╔═╡ f36a9171-fd93-42e7-90cd-1e00d65dfbd5
+dfte.heartdis = trunc.(Int64, dfte.heartdis)
 
-# ╔═╡ face61a1-a2d3-4700-a886-184cfb19700a
+# ╔═╡ 8c3ca599-4da2-45e5-b256-32497a553f9c
+dfte
+
+# ╔═╡ 566b9195-2410-49bc-99d4-0aa2a41a7a5b
+dfteNew= MLJ.transform(mach, dfte)
+
+# ╔═╡ a5a3d157-9d2d-4c37-a5df-48ee9b1dcd22
+describe(dfteNew)
+
+# ╔═╡ e17489b7-dc49-462e-bacc-5ba3b05ca365
 begin
-
-	create_hist_density_plot(df.rest_bp, 
-		"Blood Pressure Distribution",  # Title for the histogram
-        "Density Plot of Blood Pressure",  # Title for the density plot
-        "Blood Pressure",  # X-axis label for the histogram
-    	"Frequency",       # Y-axis label for the histogram
-        "Blood Pressure",  # X-axis label for the density plot
-        "Density")         # Y-axis label for the density plot
-
+histogram(dfte.ca, title="Original Data - Ca", label="Original", alpha=0.5, legend=:topright)
+histogram!(dfteNew.ca, label="Imputed", alpha=0.5)
 end
 
-# ╔═╡ fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
+# ╔═╡ fe999cfa-b303-4141-967b-f8f3185fe0f2
 begin
-
-	create_combined_plot(df.rest_bp, 
-		"Resting Blood Presure Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Blood Presure")
-
+histogram(dfte.thal, title="Original Data - Thal", label="Original", alpha=0.5, legend=:topright)
+histogram!(dfteNew.thal, label="Imputed", alpha=0.5)
 end
-
-# ╔═╡ 718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
-begin
-	# QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.rest_bp, "QQ Plot of Resting Blood Pressure")
-end
-
-# ╔═╡ 17fe2f69-2610-431f-af05-434e5ec1e6ef
-md"""
-### Feature Analysis: Serum Cholesterol
-"""
-
-# ╔═╡ 7d50fa1c-77b2-4a48-b825-1c3664684f42
-describe(df.serum_chol)
-
-# ╔═╡ b22b3bb3-ea6b-41e5-bd74-62f5145c4416
-md"""
-#### Comments on Serum Cholesterol feature:
-- The probability distribution is somewhat close to a normal distribution; however, the presence of high cholesterol outliers creates a significant positive skew, resulting in a long right tail. This suggests that while most cholesterol levels are centered around the mean, there are individuals with unusually high levels.
-- The standard deviation of 51.686237 is approximately 20.7% of the mean (249.659259), indicating moderate variability in relation to the average cholesterol level. This suggests that the data points are fairly spread around the mean, reflecting moderate dispersion compared to the typical value.
-- The median (245) is slightly lower than the mean, reinforcing the presence of skew toward higher values due to the outliers.
-- The interquartile range (213 to 280) shows where the central 50% of the data lies, which is relatively close to the mean but skewed upward, highlighting that while typical values are consistent, extreme values contribute significantly to the overall spread.
-- Overall, the data reflects a distribution where most individuals have cholesterol levels close to the mean, but the influence of high outliers pulls the average up, leading to the observed skew and extended tail.
-"""
-
-# ╔═╡ 9113278a-604c-44fc-a51a-610c4ce37064
-	create_hist_density_plot(df.serum_chol, 
-    	"Serum Cholesterol Distribution", 
-        "Density Plot of Serum Cholesterol", 
-        "cholesterol", 
-    	"Frequency", 
-        "Serum Cholesterol", 
-        "Density"
-	)
-
-# ╔═╡ aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
-begin
-
-	create_combined_plot(df.serum_chol, 
-		"Serum Cholesterol Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Serum Cholesterol")
-
-end
-
-# ╔═╡ f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
-	# QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.serum_chol, "QQ Plot of Serum Cholesterol")
-
-# ╔═╡ d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
-md"""
-### Feature Analysis: Fasting Blood Sugar > 120 mg/dL 
-"""
-
-# ╔═╡ 76b2416d-fd48-4189-842b-157ebea1ed97
-md"""
-##### Comments on Fasting Blood Sugar feature:
-- 14.8% of people had elevated fasting blood sugar levels
-- 85.2% of people had normal fasting blood sugar levels
-"""
-
-# ╔═╡ 84a429d3-653b-4572-8458-b534dd415899
-begin
-	create_binary_bar_plot(
-    	data = df.fasting_blood_sugar, 
-    	title_text = "Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
-    	xlabel_text = "Fasting Blood Sugar",  # X-axis label
-    	ylabel_text = "Count",       # Y-axis label
-    	labels = ["Elevated", "Normal"]  # Labels for the binary categories
-	)
-end
-
-# ╔═╡ c84c8d42-152d-4e6e-bf06-099774678e50
-md"""
-### Feature Analysis: Resting Electrocardiographic
-"""
-
-# ╔═╡ 6760f6ec-0f99-4ef6-9752-3bcb46150955
-begin
-	create_bar_plot(
-    	data=df.electrocardiographic, 
-    	labels=["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"], 
-    	values_to_extract=[0, 1, 2], 
-    	plot_title="Resting Electrocardiographic Results Distribution", 
-    	xlabel_text="Electrocardiographic Type", 
-    	ylabel_text="Count"
-	)
-end
-
-# ╔═╡ 32fe8106-97ed-4a48-8980-e221a0ea79fb
-md"""
-### Feature Analysis: Angina with Exercise (exang)
-"""
-
-# ╔═╡ 9d893067-18be-4982-9b42-f18de0a0ed5f
-md"""
-##### Comments on Angina with Exercise feature:
-- 33.0% have exercise induced angina
-- 77.0% do not have exercise induced angina
-"""
-
-# ╔═╡ 26dde9f9-ad73-454c-b475-dfc09894f400
-# Function call to create a percentage bar plot for df.angina
-create_binary_bar_plot(
-	data = df.angina, 
-    title_text = "Angina with Exercise Distribution (Percentage)", #Title of the plot
-    xlabel_text = "Angina with Exercise",  # X-axis label
-    ylabel_text = "Percentage (%)",        # Y-axis label
-    labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
-)
-
-# ╔═╡ 53503b2d-e4c7-4570-8262-20e8ffb50156
-md"""
-### Feature Analysis: Max Heart Rate
-"""
-
-# ╔═╡ aa772ca5-cedd-4805-add7-0404048b6e2e
-describe(df.max_heart_rate)
-
-# ╔═╡ bfc09914-c84d-4e70-8ef3-57e201c74b96
-md"""
-##### Comments on Max Heart Rate feature:
-- The data exhibits a negative skew with a long left tail, indicating that there are outliers with unusually low maximum heart rates. This skew suggests that while most individuals achieve higher maximum heart rates, some have significantly lower values that pull the distribution leftward.
-- The standard deviation is 23.165717, which is approximately 15.5% of the mean (149.677778). This indicates moderate variability relative to the average, suggesting that the heart rate values are spread moderately around the mean, reflecting a fairly consistent range for most individuals.
-- The median (153.5) is slightly higher than the mean, further supporting the negative skew, as more data points lie above the average, with fewer, but more extreme, lower values.
-- The interquartile range (133 to 166) captures the central 50% of the data, indicating that most maximum heart rates are relatively close to the mean, despite the presence of lower outliers.
-- Overall, the data suggests that while most maximum heart rates are clustered around typical values, the left skew highlights the influence of individuals with notably lower heart rates, contributing to the overall spread and shape of the distribution.
-
-"""
-
-# ╔═╡ 7eb478b5-6103-44af-bd28-48e5f2fd9080
-# Histogram and Density Plot for max_heart_rate
-create_hist_density_plot(df.max_heart_rate, 
-                         "Max Heart Rate Distribution", 
-                         "Density Plot of Max Heart Rate", 
-                         "Max Heart Rate", 
-                         "Frequency", 
-                         "Max Heart Rate", 
-                         "Density")
-
-# ╔═╡ 26f71e4e-34df-44a6-89e3-e2e40db03cf7
-# Combined Violin, Dot, and Box Plot for max_heart_rate
-create_combined_plot(df.max_heart_rate, 
-                     "Max Heart Rate Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Max Heart Rate")
-
-# ╔═╡ bc4edeec-229e-48e5-b29a-a6bafb8040c2
-# QQ Plot for max_heart_rate
-create_qqplot(df.max_heart_rate, "QQ Plot of Max Heart Rate")
-
-# ╔═╡ 579c4514-ae8e-4321-9aef-6977f2dacba2
-md"""
-### Feature Analysis: Oldpeak
-"""
-
-# ╔═╡ 80f1f0c8-d4b8-4d49-a532-d73a477046c7
-describe(df.oldpeak)
-
-# ╔═╡ 5dd78dbc-5e34-4c03-bd9a-f6c1de673106
-md"""
-##### Comments on Oldspeak feature:
-- The data is heavily positively skewed, with a long right tail, indicating that most values are concentrated at lower levels of ST depression, while a few cases exhibit significantly higher values, extending the distribution to the right.
-- The standard deviation is 1.145210, which is approximately 109% of the mean (1.050000), indicating high variability relative to the average value. This large spread suggests that while many individuals have low ST depression levels, there is considerable dispersion with some experiencing much higher values.
-- The median (0.8) is below the mean, highlighting the positive skew and indicating that over half of the observations fall below the average value, with outliers on the higher end pulling the mean upward.
-- The interquartile range (0.0 to 1.6) suggests that the central 50% of the data is relatively concentrated at the lower end, emphasizing that most individuals experience minimal to moderate levels of ST depression.
-- Overall, the distribution reflects a pattern where lower values are most common, but the presence of high outliers creates a long tail, driving the overall skew and variability observed in the data.
-
-"""
-
-# ╔═╡ a4701191-219f-4c3f-97f4-8dc4b35dd410
-# Histogram and Density Plot for oldspeak
-create_hist_density_plot(df.oldpeak, 
-                         "Oldspeak Distribution", 
-                         "Density Plot of Oldspeak", 
-                         "Oldspeak", 
-                         "Frequency", 
-                         "Oldspeak", 
-                         "Density"
-						)
-
-# ╔═╡ a407201e-5260-49ea-b48f-376b1714169b
-# Combined Violin, Dot, and Box Plot for oldpeak
-create_combined_plot(df.oldpeak, 
-                     "Oldpeak Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Oldpeak")
-
-# ╔═╡ 67400cd2-9892-4502-a5de-19fdecd9598a
-# QQ Plot for oldpeak
-create_qqplot(df.oldpeak, "QQ Plot of Oldpeak")
-
-# ╔═╡ 027d26f8-5177-4be1-b333-a7810792c6e7
-md"""
-### Feature Analysis: Slope
-"""
-
-# ╔═╡ d6c1628b-d144-4cd1-95d1-9ae7dd7e5d39
-describe(df.slope)
-
-# ╔═╡ 9d3c1583-eac0-4d38-9a86-d7db17865b6f
-md"""
-##### Comments on Slope feature:
-- Upsloping 7.4%
-- Flat 15.6%
-- Downsloping 29.3%
-"""
-
-# ╔═╡ 4d50430f-1fa0-4eee-8cf1-ef81e56f7402
-begin
-	create_bar_plot(
-    	data=df.slope, 
-    	labels=["Upsloping", "Flat", "Downsloping"], 
-    	values_to_extract=[1, 2, 3], 
-    	plot_title="Slope of Peak Exercise ST Segment Distribution", 
-    	xlabel_text="Slope Type", 
-    	ylabel_text="Count"
-	)
-end
-
-# ╔═╡ 064e0ac4-7458-4a19-8e12-0395eb92a654
-md"""
-### Feature Analysis: Major Vessels
-"""
-
-# ╔═╡ 704e6473-b07d-45a9-bf72-394da0ccdefe
-df.major_vessels
-
-# ╔═╡ c5056e29-9545-4a94-bc65-6d9fd562424e
-describe(df.major_vessels)
-
-# ╔═╡ f044966e-132e-4539-acc7-09e009b9ad4d
-md"""
-##### Comments on Major Vessesl feature:
-- The data is heavily positively skewed with a long right tail, indicating that the majority of observations have zero major vessels colored by fluoroscopy, while a smaller number of cases have high-er values.
-- The standard deviation is 0.943896, which is approximately 141% of the mean (0.670370). This high relative variability suggests a wide spread compared to the average value, primarily driven by the presence of higher values and the skewed nature of the data.
-- The median (0.000000) and the first quartile (0.000000) indicate that at least half of the data points have no major vessels colored, underscoring the concentration of data at the lower end.
-- The third quartile (1.000000) and maximum (3.000000) highlight the extent of variability, with a smaller proportion of individuals having more vessels involved, which significantly contributes to the long right tail.
-- Overall, the distribution reflects a dataset where the majority of cases have no vessels colored, but a minority with higher counts creates a substantial skew, pulling the mean up and increasing overall variability.
-
-
-"""
-
-# ╔═╡ 6cf11a9a-a837-457d-8649-afbdf8926304
-# Histogram and Density Plot for major_vessels
-create_hist_density_plot(df.major_vessels, 
-                         "Major Vessels Distribution", 
-                         "Density Plot of Major Vessels", 
-                         "Major Vessels", 
-                         "Frequency", 
-                         "Major Vessels", 
-                         "Density", 4) # bins 5
-
-# ╔═╡ 34809859-74e2-410b-b623-6212def3cc53
-# Combined Violin, Dot, and Box Plot for major_vessels
-create_combined_plot(df.major_vessels, 
-                     "Major Vessels Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Major Vessels")
-
-# ╔═╡ 591b6955-22d5-4b30-9cc6-c2fa57adbc92
-# QQ Plot for major_vessels
-create_qqplot(df.major_vessels, "QQ Plot of Major Vessels")
-
-# ╔═╡ ea52f75b-8893-41c1-b53b-0b706dc1f56a
-md"""
-### Feature Analysis: Thal
-"""
-
-# ╔═╡ a060652c-9af9-4377-acd5-11b357529aca
-md"""
-##### Comments on Thal feature:
-
-- Normal 7.4%
-- Fixed Defect 15.6%
-- Reversible Defect 29.3%
-
-"""
-
-# ╔═╡ b908bc5c-c63d-4f00-9471-28eb51cc59fa
-begin
-	create_bar_plot(
-    	data=df.thal, 
-    	labels=["Normal", "Fixed Defect", "Reversible Defect"], 
-    	values_to_extract=[3, 6, 7], 
-    	plot_title="Thal Categories", 
-    	xlabel_text="Thal Type", 
-    	ylabel_text="Count"
-	)
-end
-
-# ╔═╡ 7518ed7e-9f45-4cdc-b1d4-6fa6cf30b609
-md"""
-## Dimension Reduction: PCA
-"""
-
-# ╔═╡ 75ec9e54-15ae-40f1-b249-caccc583af99
-begin
-	# Keep the 14th colum|n as the labels (binary: 0 or 1 for heart disease)
-	labels = df[:, 14]
-	
-	X = transpose(Matrix(df[:, 1:13]))
-	
-	X1 = standardize(ZScoreTransform, X, dims=2)
-
-	# # Split into training and test sets with labels
-	# (X1_train, labels_train), (X1_test, labels_test) = splitobs((X1, labels); at=0.7, shuffle=true)
-
-end
-
-# ╔═╡ 601d2031-8b6f-481a-8e2a-e5a3af97878a
-M = fit(PCA, X1; maxoutdim=2)	
-
-# ╔═╡ fdf5f45c-43db-4813-adac-242b554fe9af
-begin
-	# Predict to get outputs from X1_test
-	Y = predict(M, X1)
-	
-	no_disease = Y[:, labels .== 0]
-	has_disease = Y[:, labels .== 1]
-
-	# Plot points from reduced dims with no disease
-	scatter(no_disease[1, :], 
-		no_disease[2, :], 
-    	marker=:circle, 
-		color=:blue, 
-		label="No Disease", 
-    	xlabel="PC1", 
-		ylabel="PC2", 
-		zlabel="PC3"
-	)
-	
-	# Plot points from reduced dims with disease
-	scatter!(has_disease[1, :], 
-		has_disease[2, :], 
-    	marker=:circle, 
-		color=:red,
-		label="Has Disease"
-	)
-	
-end
-
-# ╔═╡ 11f9c8f5-e0ef-4dc0-82b0-17e20ecc88c5
-md"""
-##### Comments on PCA:
-
-###### General
-
-- There appears to be a loose separation of points with and without heart disease which may indicate an inherate differenece between the two classes in terms of features. 
-- The loose sepeartion seems to be mostly along PC1 and probably indicates the features with the highest loadings in PC1 are resposible for the majority of the difference between the two classes
-- The dataset started with 13 features/dimentions and the PCA reduced it to 2 PCA's
-- A principal ratio of ~0.3665 indicates that the first two principal components combined explain ~36.65% of the total variance in the original data.
-
-###### Loadings
-
-These are often the top 3 contributors to the variance captured in the 2 PCA's
-
-**PC1 (First Principal Component):**
-- Oldpeak: Highest positive loading, indicating a strong influence on PC1.
-- Max Heart Rate: Highest negative loading, meaning it contributes significantly but in the opposite direction.
-- Slope: Another strong positive influence on PC1.
-**PC2 (Second Principal Component):**
-- Sex: Highest negative loading, showing a strong inverse relationship with PC2.
-- Serum Cholesterol: Highest positive loading, indicating a significant contribution to PC2.
-- Age: Also strongly contributes to PC2 in a positive direction.
-"""
-
-# ╔═╡ a7b566ab-16f6-4ae4-8340-3e6d3a155215
-md"""
-# Correlations:
-- Explore the correlations of each attribute against the presence of heart disease
-
--> Correlation Matrix
-
--> Biserial Correlation Test
-
--> Chi-Square Test
-"""
-
-# ╔═╡ 2f2b1b7f-05a0-449a-bc29-0d2204fdd2f6
-md"""
-# Correlation Matrix
-"""
-
-# ╔═╡ 1d746ebb-03db-4bfb-a10b-ffc0a2a3b124
-begin
-var_names= names(df)	
-correlation_matrix = cor(Matrix(df[:, 1:end]))
-heatmap(correlation_matrix,title="Correlation Matrix", size= (900, 750), xtickfontsize=6, xlabel="Attributes", xticks=(1:14, var_names), xrot=45, yticks=1:14, label="Attributes")
-end
-
-# ╔═╡ 97587d11-3cab-47d8-bd6f-779195da40a5
-md""" Based on the correlation heatmap, there is a strong negative correlation effect of attribute number 8= maximum heart rate to those attributes after 8. 
-
-- note that those with maximum HR achieved, less likely to have heart disease, less likely to have angina during exercise, less likely to have narrowed vessels.
-- age/sex/chest/angina history is positively correlated with vessel related attributes.
-- also noted the upper right quadrant are more positively correlated with each other such as angina during exercise, ST depression at exercise, downsloping ST, more than 1 narrowed vessels, thalaesemia value. These seem to correlate being diagnosed with heart disease"""
-
-# ╔═╡ 284be63b-61e9-45f9-8bde-0a654107d0eb
-md"""
-# Biserial Correlation Tests
-- This is to compare correlation between continuous variables against binary target (heart_disease)
-"""
-
-# ╔═╡ 1ebd13e2-dd4a-4bdc-b5de-c1aefe1cac26
-replace!(df.heart_disease, 1 => 0, 2 => 1)
-
-# ╔═╡ cb332288-3b87-4dd7-8041-d1caea555879
-continuous_var = ["age", "rest_bp", "serum_chol", "max_heart_rate", "oldpeak"]
-
-# ╔═╡ ec4cc343-7bbc-4824-ab1f-9d19629331ed
-categorical_var = select(df, Not(continuous_var))
-
-# ╔═╡ be317312-cf38-4171-b2da-3d1282179088
-begin
-biserial_data=[]	
-function biserial_correlation(continuous_var, binary_var)
-    M1 = mean(continuous_var[binary_var .== 1])
-    M0 = mean(continuous_var[binary_var .== 0])
-    S = std(continuous_var)
-    p = mean(binary_var)
-    q = 1 - p
-    φ = pdf(Normal(), quantile(Normal(), p))
-    r_pb = (M1 - M0) / S * sqrt(p * q) / φ
-
-	r_pb = round(r_pb, digits=4)
-	
-	return r_pb
-end
-# Loop through each continuous variable and calculate biserial correlation
-for var in continuous_var
-    continuous_data = df[!, var]
-    binary_data = df.heart_disease
-    correlation = biserial_correlation(continuous_data, binary_data)
-    push!(biserial_data, correlation)
-	println("Biserial Correlation between heartdis and $var: ", correlation)
-	
-end
-end
-
-# ╔═╡ dbc582ea-d72c-498b-8cb4-0d19b6d87458
-begin
-bar_chart = bar(biserial_data, xticks= (1:5, continuous_var), titlefontsize=10, title= "Biserial Correlation between Heart Disease and Continuous Attributes", legend = :none)
-end
-
-# ╔═╡ 36b9e359-c861-43fc-9a87-19e30afd5b24
-md"""
-Based on the above findings on biserial correlation calculations of continuous attributes:
-
-- There is a moderate positive correlation for age with heart disease diagnosis (i.e., with increasing age, there is increase risk of diagnosis of heart disease)
-
-- There is a mild relative positive correlation for cholesterol levels with heart disease diagnosis (i.e., with increasing cholesterol levels, there is increase risk of diagnosis of heart disease)
-
-- There is a strong positive correlation for oldpeak (this represents ST depression induced by exercise) with heart disease diagnosis (i.e., with increasing cholesterol levels, there is increase risk of diagnosis of heart disease)
-
-- There is a strong negative correlation for maxhr (this represents max) with heart disease diagnosis (i.e., with increasing max heart rate, there is decrease risk of diagnosis of heart disease)
-	"""
-
-# ╔═╡ 9f9c29a9-5213-4547-8c67-be914a39be15
-begin
-categorical_col = [:sex, :chest_pain,:fasting_blood_sugar, :electrocardiographic	,:angina, :slope,:major_vessels,:thal]
-hd_col= :heart_disease
-chqtest = DataFrame(variable=String[], statistic=Float64[], pvalue=Float64[])
-for col in categorical_col
-    # Create a contingency table
-    contingency_table = combine(groupby(df, [col, hd_col]), nrow => :count)
-    
-    # Convert the contingency table to a matrix
-    observed = DataFrames.unstack(contingency_table, col, hd_col, :count) |> Matrix
-
-	observed = convert(Matrix{Int}, observed)
-    # Perform the Chi-Square test
-    chi_square_test = ChisqTest(observed)
-	cqt_val= round(chi_square_test.stat, digits=3)
-	pvaluect= round(pvalue(chi_square_test), sigdigits=3)
-    
-    # Print the results with p-values
-	push!(chqtest, (string(col), cqt_val, pvaluect))
-    println("Chi-Square test for $col:")
-    println("Test Statistic: ", cqt_val)
-	println("P-value:", pvaluect)
-    println()
-end
-end
-
-# ╔═╡ bd12b86d-01fe-454a-b1af-05b3bc7f8754
-chqtest
-
-# ╔═╡ cb7d9e99-c183-42b0-a345-69d4a89416e7
-bar(chqtest.variable, chqtest.statistic, legend=false, title="Chi-Square Test Statistics", xlabel="Variable", xrot=45, ylabel="Test Statistic")
-
-# ╔═╡ 3baed477-300c-491f-b88c-64427f8f42a6
-md"""
-The above is a Chi-square analysis of all the categorical data against the heart disease target. Based on the findings, all except fasting blood sugar levels are statiscally significant. In other words, sex (i.e. male), history of chest pain, abnormal resting ecg, angina during exercise, downsloping of ST segment, increase in narrowing vessels, higher thal value are contributing risk factors for presence of heart disease.
-- As part of the EDA, these categorical features could be used as features in developing predictive modelling for diagnosis for heart disease.
-"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
-MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
+MLJModels = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 CSV = "~0.10.14"
+Clustering = "~0.15.7"
 DataFrames = "~1.6.1"
+Distances = "~0.10.11"
 Distributions = "~0.25.111"
+GLM = "~1.8.3"
 HypothesisTests = "~0.11.2"
-MLUtils = "~0.4.4"
+MLJ = "~0.19.5"
+MLJModels = "~0.16.10"
 MultivariateStats = "~0.10.3"
-Plots = "~1.40.5"
+Plots = "~1.40.7"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
 """
@@ -768,7 +163,13 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "54b1c018df71e708a4fe506ff3cdbd33e8d339b9"
+project_hash = "7ff3409f3686d9da610e830384fd10c26e1447bf"
+
+[[deps.ARFFFiles]]
+deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
+git-tree-sha1 = "e8c8e0a2be6eb4f56b1672e46004463033daa409"
+uuid = "da404889-ca92-49ff-9e8b-0aa6b4d38dc8"
+version = "1.4.1"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -822,11 +223,6 @@ git-tree-sha1 = "9876e1e164b144ca45e9e3198d0b689cadfed9ff"
 uuid = "66dad0bd-aa9a-41b7-9441-69ab47430ed8"
 version = "1.1.3"
 
-[[deps.ArgCheck]]
-git-tree-sha1 = "a3a402a35a2f7e0b87828ccabbd5ebfbebe356b4"
-uuid = "dce04be8-c92d-5529-be00-80e4d2c0e197"
-version = "2.3.0"
-
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
@@ -846,47 +242,14 @@ version = "3.5.1+1"
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 
-[[deps.Atomix]]
-deps = ["UnsafeAtomics"]
-git-tree-sha1 = "c06a868224ecba914baa6942988e2f2aade419be"
-uuid = "a9b6321e-bd34-4604-b9c9-b65b8de01458"
-version = "0.1.0"
-
 [[deps.AxisAlgorithms]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
 git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.1.0"
 
-[[deps.BangBang]]
-deps = ["Accessors", "ConstructionBase", "InitialValues", "LinearAlgebra", "Requires"]
-git-tree-sha1 = "e2144b631226d9eeab2d746ca8880b7ccff504ae"
-uuid = "198e06fe-97b7-11e9-32a5-e1d131e6ad66"
-version = "0.4.3"
-
-    [deps.BangBang.extensions]
-    BangBangChainRulesCoreExt = "ChainRulesCore"
-    BangBangDataFramesExt = "DataFrames"
-    BangBangStaticArraysExt = "StaticArrays"
-    BangBangStructArraysExt = "StructArrays"
-    BangBangTablesExt = "Tables"
-    BangBangTypedTablesExt = "TypedTables"
-
-    [deps.BangBang.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-    StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-    Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-    TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
-
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-
-[[deps.Baselet]]
-git-tree-sha1 = "aebf55e6d7795e02ca500a689d326ac979aaf89e"
-uuid = "9718e550-a3fa-408a-8086-8db961cd8217"
-version = "0.1.1"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -899,11 +262,6 @@ git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.8+1"
 
-[[deps.CEnum]]
-git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
-uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-version = "0.5.0"
-
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
 git-tree-sha1 = "6c834533dc1fabd820c1db03c839bf97e45a3fab"
@@ -915,6 +273,36 @@ deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jl
 git-tree-sha1 = "a2f1c8c668c8e3cb4cca4e57a8efdb09067bb3fd"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.0+2"
+
+[[deps.CategoricalArrays]]
+deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
+git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
+uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+version = "0.10.8"
+
+    [deps.CategoricalArrays.extensions]
+    CategoricalArraysJSONExt = "JSON"
+    CategoricalArraysRecipesBaseExt = "RecipesBase"
+    CategoricalArraysSentinelArraysExt = "SentinelArrays"
+    CategoricalArraysStructTypesExt = "StructTypes"
+
+    [deps.CategoricalArrays.weakdeps]
+    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+
+[[deps.CategoricalDistributions]]
+deps = ["CategoricalArrays", "Distributions", "Missings", "OrderedCollections", "Random", "ScientificTypes"]
+git-tree-sha1 = "926862f549a82d6c3a7145bc7f1adff2a91a39f0"
+uuid = "af321ab8-2d2e-40a6-b165-3d674595d28e"
+version = "0.1.15"
+
+    [deps.CategoricalDistributions.extensions]
+    UnivariateFiniteDisplayExt = "UnicodePlots"
+
+    [deps.CategoricalDistributions.weakdeps]
+    UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
@@ -1000,6 +388,11 @@ weakdeps = ["InverseFunctions"]
     [deps.CompositionsBase.extensions]
     CompositionsBaseInverseFunctionsExt = "InverseFunctions"
 
+[[deps.ComputationalResources]]
+git-tree-sha1 = "52cb3ec90e8a8bea0e62e275ba577ad0f74821f7"
+uuid = "ed09eef8-17a6-5b46-8889-db040fac31e3"
+version = "0.3.2"
+
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
 git-tree-sha1 = "ea32b83ca4fefa1768dc84e504cc0a94fb1ab8d1"
@@ -1020,12 +413,6 @@ version = "1.5.8"
     IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
     LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-
-[[deps.ContextVariablesX]]
-deps = ["Compat", "Logging", "UUIDs"]
-git-tree-sha1 = "25cc3803f1030ab855e383129dcd3dc294e322cc"
-uuid = "6add18c4-b38d-439d-96f6-d6bc489c04c5"
-version = "0.1.3"
 
 [[deps.Contour]]
 git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
@@ -1068,11 +455,6 @@ deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "fc173b380865f70627d7dd1190dc2fce6cc105af"
 uuid = "ee1fde0b-3d02-5ea6-8484-8dfef6360eab"
 version = "1.14.10+0"
-
-[[deps.DefineSingletons]]
-git-tree-sha1 = "0fba8b706d0178b4dc7fd44a96a92382c9065c2c"
-uuid = "244e2a9f-e319-4986-a169-4d1fe445cd52"
-version = "0.1.2"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
@@ -1122,6 +504,12 @@ deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
 
+[[deps.EarlyStopping]]
+deps = ["Dates", "Statistics"]
+git-tree-sha1 = "98fdf08b707aaf69f524a6cd0a67858cefe0cfb6"
+uuid = "792122b4-ca99-40de-a6bc-6742525f08b6"
+version = "0.3.0"
+
 [[deps.EpollShim_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "8e9441ee83492030ace98f9789a654a6d0b1f643"
@@ -1163,18 +551,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "c6033cc3892d0ef5bb9cd29b7f2f0331ea5184ea"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.10+0"
-
-[[deps.FLoops]]
-deps = ["BangBang", "Compat", "FLoopsBase", "InitialValues", "JuliaVariables", "MLStyle", "Serialization", "Setfield", "Transducers"]
-git-tree-sha1 = "0a2e5873e9a5f54abb06418d57a8df689336a660"
-uuid = "cc61a311-1640-44b5-9fba-1b764f453329"
-version = "0.2.2"
-
-[[deps.FLoopsBase]]
-deps = ["ContextVariablesX"]
-git-tree-sha1 = "656f7a6859be8673bf1f35da5670246b923964f7"
-uuid = "b9860ae5-e623-471e-878b-f6a53c775ea6"
-version = "0.1.1"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates"]
@@ -1241,11 +617,11 @@ git-tree-sha1 = "532f9126ad901533af1d4f5c198867227a7bb077"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
 version = "3.4.0+1"
 
-[[deps.GPUArraysCore]]
-deps = ["Adapt"]
-git-tree-sha1 = "ec632f177c0d990e64d955ccc1b8c04c485a0950"
-uuid = "46192b85-c4d5-4398-a991-12ede77f4527"
-version = "0.1.6"
+[[deps.GLM]]
+deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
+git-tree-sha1 = "97829cfda0df99ddaeaafb5b370d6cab87b7013e"
+uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
+version = "1.8.3"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
@@ -1289,10 +665,10 @@ uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "1.10.8"
 
 [[deps.HarfBuzz_jll]]
-deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
+deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll"]
+git-tree-sha1 = "401e4f3f30f43af2c8478fc008da50096ea5240f"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+1"
+version = "8.3.1+0"
 
 [[deps.HypergeometricFunctions]]
 deps = ["LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
@@ -1305,11 +681,6 @@ deps = ["Combinatorics", "Distributions", "LinearAlgebra", "Printf", "Random", "
 git-tree-sha1 = "35235811ebde579eb0d4eb9f89cc8fc3c31d103d"
 uuid = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 version = "0.11.2"
-
-[[deps.InitialValues]]
-git-tree-sha1 = "4da0f88e9a39111c2fa3add390ab15f3a44f3ca3"
-uuid = "22cec73e-a1b8-11e9-2c92-598750a2cf9c"
-version = "0.3.1"
 
 [[deps.InlineStrings]]
 git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
@@ -1364,6 +735,12 @@ git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.2"
 
+[[deps.IterationControl]]
+deps = ["EarlyStopping", "InteractiveUtils"]
+git-tree-sha1 = "d7df9a6fdd82a8cfdfe93a94fcce35515be634da"
+uuid = "b3c1a2ee-3fec-4384-bf48-272ea71de57c"
+version = "0.5.3"
+
 [[deps.IteratorInterfaceExtensions]]
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
@@ -1371,9 +748,9 @@ version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
-git-tree-sha1 = "a53ebe394b71470c7f97c2e7e170d51df21b17af"
+git-tree-sha1 = "39d64b09147620f5ffbf6b2d3255be3c901bec63"
 uuid = "1019f520-868f-41f5-a6de-eb00f4b6a39c"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -1393,28 +770,6 @@ git-tree-sha1 = "c84a835e1a09b289ffcd2271bf2a337bbdda6637"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
 version = "3.0.3+0"
 
-[[deps.JuliaVariables]]
-deps = ["MLStyle", "NameResolution"]
-git-tree-sha1 = "49fb3cb53362ddadb4415e9b73926d6b40709e70"
-uuid = "b14d175d-62b4-44ba-8fb7-3064adc8c3ec"
-version = "0.2.4"
-
-[[deps.KernelAbstractions]]
-deps = ["Adapt", "Atomix", "InteractiveUtils", "MacroTools", "PrecompileTools", "Requires", "StaticArrays", "UUIDs", "UnsafeAtomics", "UnsafeAtomicsLLVM"]
-git-tree-sha1 = "cb1cff88ef2f3a157cbad75bbe6b229e1975e498"
-uuid = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
-version = "0.9.25"
-
-    [deps.KernelAbstractions.extensions]
-    EnzymeExt = "EnzymeCore"
-    LinearAlgebraExt = "LinearAlgebra"
-    SparseArraysExt = "SparseArrays"
-
-    [deps.KernelAbstractions.weakdeps]
-    EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
-    LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
 git-tree-sha1 = "7d703202e65efa1369de1279c162b915e245eed1"
@@ -1432,24 +787,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
 uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
 version = "3.0.0+1"
-
-[[deps.LLVM]]
-deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Preferences", "Printf", "Requires", "Unicode"]
-git-tree-sha1 = "4ad43cb0a4bb5e5b1506e1d1f48646d7e0c80363"
-uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
-version = "9.1.2"
-
-    [deps.LLVM.extensions]
-    BFloat16sExt = "BFloat16s"
-
-    [deps.LLVM.weakdeps]
-    BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
-
-[[deps.LLVMExtra_jll]]
-deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "05a8bd5a42309a9ec82f700876903abce1017dd3"
-uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
-version = "0.0.34+0"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1483,6 +820,12 @@ version = "0.16.5"
     DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
+
+[[deps.LatinHypercubeSampling]]
+deps = ["Random", "StableRNGs", "StatsBase", "Test"]
+git-tree-sha1 = "825289d43c753c7f1bf9bed334c253e9913997f8"
+uuid = "a5e1c1ea-c99a-51d3-a14d-a9a37257b02d"
+version = "1.9.0"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
@@ -1592,22 +935,75 @@ git-tree-sha1 = "c1dd6d7978c12545b4179fb6153b9250c96b0075"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.0.3"
 
+[[deps.LossFunctions]]
+deps = ["Markdown", "Requires", "Statistics"]
+git-tree-sha1 = "df9da07efb9b05ca7ef701acec891ee8f73c99e2"
+uuid = "30fc2ffe-d236-52d8-8643-a9d8f7c094a7"
+version = "0.11.1"
+weakdeps = ["CategoricalArrays"]
+
+    [deps.LossFunctions.extensions]
+    LossFunctionsCategoricalArraysExt = "CategoricalArrays"
+
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
 git-tree-sha1 = "f046ccd0c6db2832a9f639e2c669c6fe867e5f4f"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2024.2.0+0"
 
-[[deps.MLStyle]]
-git-tree-sha1 = "bc38dff0548128765760c79eb7388a4b37fae2c8"
-uuid = "d8e11817-5142-5d16-987a-aa16d5891078"
-version = "0.4.17"
-
-[[deps.MLUtils]]
-deps = ["ChainRulesCore", "Compat", "DataAPI", "DelimitedFiles", "FLoops", "NNlib", "Random", "ShowCases", "SimpleTraits", "Statistics", "StatsBase", "Tables", "Transducers"]
-git-tree-sha1 = "b45738c2e3d0d402dffa32b2c1654759a2ac35a4"
-uuid = "f1d291b0-491e-4a28-83b9-f70985020b54"
+[[deps.MLFlowClient]]
+deps = ["Dates", "FilePathsBase", "HTTP", "JSON", "ShowCases", "URIs", "UUIDs"]
+git-tree-sha1 = "32cee10a6527476bef0c6484ff4c60c2cead5d3e"
+uuid = "64a0f543-368b-4a9a-827a-e71edb2a0b83"
 version = "0.4.4"
+
+[[deps.MLJ]]
+deps = ["CategoricalArrays", "ComputationalResources", "Distributed", "Distributions", "LinearAlgebra", "MLJBase", "MLJEnsembles", "MLJFlow", "MLJIteration", "MLJModels", "MLJTuning", "OpenML", "Pkg", "ProgressMeter", "Random", "Reexport", "ScientificTypes", "Statistics", "StatsBase", "Tables"]
+git-tree-sha1 = "193f1f1ac77d91eabe1ac81ff48646b378270eef"
+uuid = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
+version = "0.19.5"
+
+[[deps.MLJBase]]
+deps = ["CategoricalArrays", "CategoricalDistributions", "ComputationalResources", "Dates", "DelimitedFiles", "Distributed", "Distributions", "InteractiveUtils", "InvertedIndices", "LinearAlgebra", "LossFunctions", "MLJModelInterface", "Missings", "OrderedCollections", "Parameters", "PrettyTables", "ProgressMeter", "Random", "ScientificTypes", "Serialization", "StatisticalTraits", "Statistics", "StatsBase", "Tables"]
+git-tree-sha1 = "0b7307d1a7214ec3c0ba305571e713f9492ea984"
+uuid = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
+version = "0.21.14"
+
+[[deps.MLJEnsembles]]
+deps = ["CategoricalArrays", "CategoricalDistributions", "ComputationalResources", "Distributed", "Distributions", "MLJBase", "MLJModelInterface", "ProgressMeter", "Random", "ScientificTypesBase", "StatsBase"]
+git-tree-sha1 = "95b306ef8108067d26dfde9ff3457d59911cc0d6"
+uuid = "50ed68f4-41fd-4504-931a-ed422449fee0"
+version = "0.3.3"
+
+[[deps.MLJFlow]]
+deps = ["MLFlowClient", "MLJBase", "MLJModelInterface"]
+git-tree-sha1 = "bceeeb648c9aa2fc6f65f957c688b164d30f2905"
+uuid = "7b7b8358-b45c-48ea-a8ef-7ca328ad328f"
+version = "0.1.1"
+
+[[deps.MLJIteration]]
+deps = ["IterationControl", "MLJBase", "Random", "Serialization"]
+git-tree-sha1 = "be6d5c71ab499a59e82d65e00a89ceba8732fcd5"
+uuid = "614be32b-d00c-4edb-bd02-1eb411ab5e55"
+version = "0.5.1"
+
+[[deps.MLJModelInterface]]
+deps = ["Random", "ScientificTypesBase", "StatisticalTraits"]
+git-tree-sha1 = "ceaff6618408d0e412619321ae43b33b40c1a733"
+uuid = "e80e1ace-859a-464e-9ed9-23947d8ae3ea"
+version = "1.11.0"
+
+[[deps.MLJModels]]
+deps = ["CategoricalArrays", "CategoricalDistributions", "Combinatorics", "Dates", "Distances", "Distributions", "InteractiveUtils", "LinearAlgebra", "MLJModelInterface", "Markdown", "OrderedCollections", "Parameters", "Pkg", "PrettyPrinting", "REPL", "Random", "RelocatableFolders", "ScientificTypes", "StatisticalTraits", "Statistics", "StatsBase", "Tables"]
+git-tree-sha1 = "2b49f04f70266a2b040eb46ece157c4f5c1b0c13"
+uuid = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
+version = "0.16.10"
+
+[[deps.MLJTuning]]
+deps = ["ComputationalResources", "Distributed", "Distributions", "LatinHypercubeSampling", "MLJBase", "ProgressMeter", "Random", "RecipesBase"]
+git-tree-sha1 = "02688098bd77827b64ed8ad747c14f715f98cfc4"
+uuid = "03970b2e-30c4-11ea-3135-d1576263f10f"
+version = "0.7.4"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -1635,12 +1031,6 @@ git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.2"
 
-[[deps.MicroCollections]]
-deps = ["Accessors", "BangBang", "InitialValues"]
-git-tree-sha1 = "44d32db644e84c75dab479f1bc15ee76a1a3618f"
-uuid = "128add7d-3638-4c79-886c-908ea0c25c34"
-version = "0.2.0"
-
 [[deps.Missings]]
 deps = ["DataAPI"]
 git-tree-sha1 = "ec4f7fbeab05d7747bdf98eb74d130a2a2ed298d"
@@ -1660,39 +1050,11 @@ git-tree-sha1 = "816620e3aac93e5b5359e4fdaf23ca4525b00ddf"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
 version = "0.10.3"
 
-[[deps.NNlib]]
-deps = ["Adapt", "Atomix", "ChainRulesCore", "GPUArraysCore", "KernelAbstractions", "LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "4a83c2e01027a0bfcea28589222f2df60b2e20cb"
-uuid = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
-version = "0.9.23"
-
-    [deps.NNlib.extensions]
-    NNlibAMDGPUExt = "AMDGPU"
-    NNlibCUDACUDNNExt = ["CUDA", "cuDNN"]
-    NNlibCUDAExt = "CUDA"
-    NNlibEnzymeCoreExt = "EnzymeCore"
-    NNlibFFTWExt = "FFTW"
-    NNlibForwardDiffExt = "ForwardDiff"
-
-    [deps.NNlib.weakdeps]
-    AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
-    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-    EnzymeCore = "f151be2c-9106-41f4-ab19-57ee4f262869"
-    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-    cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
-
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
-
-[[deps.NameResolution]]
-deps = ["PrettyPrint"]
-git-tree-sha1 = "1a0fa0e9613f46c9b8c11eee38ebb4f590013c5e"
-uuid = "71a1bf82-56d0-4bbc-8a3c-48b961074391"
-version = "0.1.5"
 
 [[deps.NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
@@ -1734,6 +1096,12 @@ deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 version = "0.8.1+2"
 
+[[deps.OpenML]]
+deps = ["ARFFFiles", "HTTP", "JSON", "Markdown", "Pkg", "Scratch"]
+git-tree-sha1 = "6efb039ae888699d5a74fb593f6f3e10c7193e33"
+uuid = "8b6db2d4-7670-4922-a472-f9537c81ab66"
+version = "0.3.1"
+
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
 git-tree-sha1 = "38cb508d080d21dc1128f7fb04f20387ed4c0af4"
@@ -1753,10 +1121,10 @@ uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
 version = "0.5.5+0"
 
 [[deps.Opus_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "6703a85cb3781bd5909d48730a67205f3f31a575"
 uuid = "91d4177d-7536-5919-b921-800302f37372"
-version = "1.3.2+0"
+version = "1.3.3+0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "dfdf5519f235516220579f949664f1bf44e741c5"
@@ -1776,9 +1144,15 @@ version = "0.11.31"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "cb5a2ab6763464ae0f19c86c56c63d4a2b0f5bda"
+git-tree-sha1 = "e127b609fb9ecba6f201ba7ab753d5a605d53801"
 uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
-version = "1.52.2+0"
+version = "1.54.1+0"
+
+[[deps.Parameters]]
+deps = ["OrderedCollections", "UnPack"]
+git-tree-sha1 = "34c0e9ad262e5f7fc75b10a9952ca7692cfc5fbe"
+uuid = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+version = "0.12.3"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1816,9 +1190,9 @@ version = "1.4.1"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "082f0c4b70c202c37784ce4bfbc33c9f437685bf"
+git-tree-sha1 = "f202a1ca4f6e165238d8175df63a7e26a51e04dc"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.5"
+version = "1.40.7"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1852,10 +1226,10 @@ git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
 
-[[deps.PrettyPrint]]
-git-tree-sha1 = "632eb4abab3449ab30c5e1afaa874f0b98b586e4"
-uuid = "8162dcfd-2161-5ef2-ae6c-7681170c5f98"
-version = "0.2.0"
+[[deps.PrettyPrinting]]
+git-tree-sha1 = "22a601b04a154ca38867b991d5017469dc75f2db"
+uuid = "54e16d92-306c-5ea0-a30b-337be88ac337"
+version = "0.4.1"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
@@ -1866,6 +1240,12 @@ version = "2.3.2"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.ProgressMeter]]
+deps = ["Distributed", "Printf"]
+git-tree-sha1 = "8f6bc219586aef8baf0ff9a5fe16ee9c70cb65e4"
+uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
+version = "1.10.2"
 
 [[deps.PtrArrays]]
 git-tree-sha1 = "77a42d78b6a92df47ab37e177b2deac405e1c88f"
@@ -1991,6 +1371,17 @@ version = "2.2.1"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
+[[deps.ScientificTypes]]
+deps = ["CategoricalArrays", "ColorTypes", "Dates", "Distributions", "PrettyTables", "Reexport", "ScientificTypesBase", "StatisticalTraits", "Tables"]
+git-tree-sha1 = "75ccd10ca65b939dab03b812994e571bf1e3e1da"
+uuid = "321657f4-b219-11e9-178b-2701a2544e81"
+version = "3.0.2"
+
+[[deps.ScientificTypesBase]]
+git-tree-sha1 = "a8e18eb383b5ecf1b5e6fc237eb39255044fd92b"
+uuid = "30f210dd-8aff-4c5f-94ba-8e64358c1161"
+version = "3.0.0"
+
 [[deps.Scratch]]
 deps = ["Dates"]
 git-tree-sha1 = "3bac05bc7e74a75fd9cba4295cde4045d9fe2386"
@@ -2006,15 +1397,14 @@ version = "1.4.5"
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
-[[deps.Setfield]]
-deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
-git-tree-sha1 = "e2cc6d8c88613c05e1defb55170bf5ff211fbeac"
-uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
-version = "1.1.1"
-
 [[deps.SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
+
+[[deps.ShiftedArrays]]
+git-tree-sha1 = "503688b59397b3307443af35cd953a13e8005c16"
+uuid = "1277b4bf-5013-50f5-be3d-901d8477a67a"
+version = "2.0.0"
 
 [[deps.ShowCases]]
 git-tree-sha1 = "7f534ad62ab2bd48591bdeac81994ea8c445e4a5"
@@ -2031,12 +1421,6 @@ version = "1.0.3"
 git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
 version = "1.1.0"
-
-[[deps.SimpleTraits]]
-deps = ["InteractiveUtils", "MacroTools"]
-git-tree-sha1 = "5d7e3f4e11935503d3ecaf7186eac40602e7d231"
-uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
-version = "0.9.4"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
@@ -2062,11 +1446,11 @@ weakdeps = ["ChainRulesCore"]
     [deps.SpecialFunctions.extensions]
     SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
 
-[[deps.SplittablesBase]]
-deps = ["Setfield", "Test"]
-git-tree-sha1 = "e08a62abc517eb79667d0a29dc08a3b589516bb5"
-uuid = "171d559e-b47b-412a-8079-5efa626c420e"
-version = "0.1.15"
+[[deps.StableRNGs]]
+deps = ["Random", "Test"]
+git-tree-sha1 = "3be7d49667040add7ee151fefaf1f8c04c8c8276"
+uuid = "860ef19b-820b-49d6-a774-d7a799459cd3"
+version = "1.0.0"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
@@ -2083,6 +1467,12 @@ weakdeps = ["ChainRulesCore", "Statistics"]
 git-tree-sha1 = "192954ef1208c7019899fbf8049e717f92959682"
 uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 version = "1.4.3"
+
+[[deps.StatisticalTraits]]
+deps = ["ScientificTypesBase"]
+git-tree-sha1 = "542d979f6e756f13f862aa00b224f04f9e445f11"
+uuid = "64bff920-2084-43da-a3e6-9bb72801c0c9"
+version = "3.4.0"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -2111,6 +1501,12 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     [deps.StatsFuns.extensions]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
+
+[[deps.StatsModels]]
+deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
+git-tree-sha1 = "8cc7a5385ecaa420f0b3426f9b0135d0df0638ed"
+uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
+version = "0.7.2"
 
 [[deps.StatsPlots]]
 deps = ["AbstractFFTs", "Clustering", "DataStructures", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "NaNMath", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
@@ -2176,26 +1572,6 @@ git-tree-sha1 = "e84b3a11b9bece70d14cce63406bbc79ed3464d2"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.11.2"
 
-[[deps.Transducers]]
-deps = ["Accessors", "Adapt", "ArgCheck", "BangBang", "Baselet", "CompositionsBase", "ConstructionBase", "DefineSingletons", "Distributed", "InitialValues", "Logging", "Markdown", "MicroCollections", "Requires", "SplittablesBase", "Tables"]
-git-tree-sha1 = "5215a069867476fc8e3469602006b9670e68da23"
-uuid = "28d57a85-8fef-5791-bfe6-a80928e7c999"
-version = "0.4.82"
-
-    [deps.Transducers.extensions]
-    TransducersBlockArraysExt = "BlockArrays"
-    TransducersDataFramesExt = "DataFrames"
-    TransducersLazyArraysExt = "LazyArrays"
-    TransducersOnlineStatsBaseExt = "OnlineStatsBase"
-    TransducersReferenceablesExt = "Referenceables"
-
-    [deps.Transducers.weakdeps]
-    BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
-    DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-    LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-    OnlineStatsBase = "925886fa-5bf2-5e8e-b522-a9147a512338"
-    Referenceables = "42d2dcc6-99eb-4e98-b66c-637b7d73030e"
-
 [[deps.URIs]]
 git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
 uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
@@ -2204,6 +1580,11 @@ version = "1.5.1"
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[[deps.UnPack]]
+git-tree-sha1 = "387c1f73762231e86e0c9c5443ce3b4a0a9a0c2b"
+uuid = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
+version = "1.0.2"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
@@ -2230,17 +1611,6 @@ deps = ["LaTeXStrings", "Latexify", "Unitful"]
 git-tree-sha1 = "975c354fcd5f7e1ddcc1f1a23e6e091d99e99bc8"
 uuid = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 version = "1.6.4"
-
-[[deps.UnsafeAtomics]]
-git-tree-sha1 = "6331ac3440856ea1988316b46045303bef658278"
-uuid = "013be700-e6cd-48c3-b4a1-df204f14c38f"
-version = "0.2.1"
-
-[[deps.UnsafeAtomicsLLVM]]
-deps = ["LLVM", "UnsafeAtomics"]
-git-tree-sha1 = "2d17fabcd17e67d7625ce9c531fb9f40b7c42ce4"
-uuid = "d80eeb9a-aca5-4d75-85e5-170c8b632249"
-version = "0.2.1"
 
 [[deps.Unzip]]
 git-tree-sha1 = "ca0969166a028236229f63514992fc073799bb78"
@@ -2290,9 +1660,9 @@ version = "1.6.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "d9717ce3518dc68a99e6b96300813760d887a01d"
+git-tree-sha1 = "1165b0443d0eca63ac1e32b8c0eb69ed2f4f8127"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.13.1+0"
+version = "2.13.3+0"
 
 [[deps.XSLT_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
@@ -2469,9 +1839,9 @@ version = "3.2.9+0"
 
 [[deps.fzf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a68c9655fbe6dfcab3d972808f1aafec151ce3f8"
+git-tree-sha1 = "936081b536ae4aa65415d869287d43ef3cb576b2"
 uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
-version = "0.43.0+0"
+version = "0.53.0+0"
 
 [[deps.gperf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2486,10 +1856,10 @@ uuid = "a4ae2306-e953-59d6-aa16-d00cac43593b"
 version = "3.9.0+0"
 
 [[deps.libass_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "5982a94fcba20f02f42ace44b9894ee2b140fe47"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "e17c115d55c5fbb7e52ebedb427a0dca79d4484e"
 uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
-version = "0.15.1+0"
+version = "0.15.2+0"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -2509,10 +1879,10 @@ uuid = "2db6ffa8-e38f-5e21-84af-90c45d0032cc"
 version = "1.11.0+0"
 
 [[deps.libfdk_aac_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "daacc84a041563f965be61859a36e17c4e4fcd55"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "8a22cf860a7d27e4f3498a0fe0811a7957badb38"
 uuid = "f638f0a6-7fb0-5443-88ba-1cc74229b280"
-version = "2.0.2+0"
+version = "2.0.3+0"
 
 [[deps.libinput_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "eudev_jll", "libevdev_jll", "mtdev_jll"]
@@ -2574,92 +1944,23 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═92a554a2-ff53-477b-8ccf-4a178ee01672
-# ╠═f1b4cd6a-68be-4fb7-a4ee-47b7fb5f68ca
-# ╟─f298fb92-9015-4de9-942e-11206ae80183
-# ╠═a174259c-5822-4aa1-b162-d07deef886af
-# ╠═d6c8603b-569f-4c02-a3fb-3d0e74bbf638
-# ╟─e804fdc5-cca9-4912-8c51-d39accde1d3f
-# ╟─35fa6501-bd25-44ef-baca-f5bf27d55820
-# ╟─24dc537e-6786-40e2-9305-a21dbe11d305
-# ╟─f834790d-2ff3-42a7-9570-2bdf8526d0d4
-# ╟─1847271c-13d1-40e9-8510-5df10c8d3387
-# ╠═e8ae2135-8cbd-4541-9736-7b9f4d89c0d5
-# ╠═69956da7-2ec9-446f-b820-9918cb7f7a2a
-# ╠═ea135519-5c1c-4133-96af-4217ce2e8125
-# ╟─11cb6c44-506c-4261-a07d-27a6bdd3a7ea
-# ╠═004da6e2-b821-4096-b2e9-5f2ab5dc079e
-# ╠═d374d9b1-dcad-44a2-9020-ddeb669e435c
-# ╠═90c1db0d-67a9-4dff-b5dd-bd9b23339f0e
-# ╠═95398b93-4809-4339-afa8-d653dd1b52db
-# ╠═ce90bd00-69a2-4d7e-a96d-875a6eac6b7d
-# ╠═b280a319-cfa7-4b79-8a7e-7805d9dcf808
-# ╠═126128d5-8690-4cf0-abab-0a58229ef111
-# ╠═16748bd6-6f85-48cf-8043-c3ab2c8abbb9
-# ╠═ffe1d39f-37b7-440e-befd-b31cc696fee3
-# ╟─06b8a523-96c1-48a5-88bb-1b5a112e92fd
-# ╠═face61a1-a2d3-4700-a886-184cfb19700a
-# ╠═fd88d57c-7c1b-49ff-9d0a-bbafbf1289b9
-# ╠═718c6ba5-9c1f-4dfd-8e3c-fc2dd58f9fb8
-# ╠═17fe2f69-2610-431f-af05-434e5ec1e6ef
-# ╠═7d50fa1c-77b2-4a48-b825-1c3664684f42
-# ╟─b22b3bb3-ea6b-41e5-bd74-62f5145c4416
-# ╠═9113278a-604c-44fc-a51a-610c4ce37064
-# ╠═aaf1e4b6-72bd-4385-a79d-ce8759f1d90a
-# ╠═f0cd7ffb-4f3e-4e3a-a6cb-4f3582b9094f
-# ╠═d7986e82-1825-4abc-9a0e-0f2fb9ed80fb
-# ╟─76b2416d-fd48-4189-842b-157ebea1ed97
-# ╟─84a429d3-653b-4572-8458-b534dd415899
-# ╠═c84c8d42-152d-4e6e-bf06-099774678e50
-# ╠═6760f6ec-0f99-4ef6-9752-3bcb46150955
-# ╠═32fe8106-97ed-4a48-8980-e221a0ea79fb
-# ╟─9d893067-18be-4982-9b42-f18de0a0ed5f
-# ╠═26dde9f9-ad73-454c-b475-dfc09894f400
-# ╠═53503b2d-e4c7-4570-8262-20e8ffb50156
-# ╠═aa772ca5-cedd-4805-add7-0404048b6e2e
-# ╟─bfc09914-c84d-4e70-8ef3-57e201c74b96
-# ╠═7eb478b5-6103-44af-bd28-48e5f2fd9080
-# ╠═26f71e4e-34df-44a6-89e3-e2e40db03cf7
-# ╠═bc4edeec-229e-48e5-b29a-a6bafb8040c2
-# ╠═579c4514-ae8e-4321-9aef-6977f2dacba2
-# ╠═80f1f0c8-d4b8-4d49-a532-d73a477046c7
-# ╟─5dd78dbc-5e34-4c03-bd9a-f6c1de673106
-# ╠═a4701191-219f-4c3f-97f4-8dc4b35dd410
-# ╠═a407201e-5260-49ea-b48f-376b1714169b
-# ╠═67400cd2-9892-4502-a5de-19fdecd9598a
-# ╠═027d26f8-5177-4be1-b333-a7810792c6e7
-# ╠═d6c1628b-d144-4cd1-95d1-9ae7dd7e5d39
-# ╟─9d3c1583-eac0-4d38-9a86-d7db17865b6f
-# ╠═4d50430f-1fa0-4eee-8cf1-ef81e56f7402
-# ╠═064e0ac4-7458-4a19-8e12-0395eb92a654
-# ╠═704e6473-b07d-45a9-bf72-394da0ccdefe
-# ╠═c5056e29-9545-4a94-bc65-6d9fd562424e
-# ╟─f044966e-132e-4539-acc7-09e009b9ad4d
-# ╠═6cf11a9a-a837-457d-8649-afbdf8926304
-# ╟─34809859-74e2-410b-b623-6212def3cc53
-# ╟─591b6955-22d5-4b30-9cc6-c2fa57adbc92
-# ╠═ea52f75b-8893-41c1-b53b-0b706dc1f56a
-# ╟─a060652c-9af9-4377-acd5-11b357529aca
-# ╠═b908bc5c-c63d-4f00-9471-28eb51cc59fa
-# ╟─7518ed7e-9f45-4cdc-b1d4-6fa6cf30b609
-# ╠═75ec9e54-15ae-40f1-b249-caccc583af99
-# ╠═601d2031-8b6f-481a-8e2a-e5a3af97878a
-# ╠═fdf5f45c-43db-4813-adac-242b554fe9af
-# ╟─11f9c8f5-e0ef-4dc0-82b0-17e20ecc88c5
-# ╟─a7b566ab-16f6-4ae4-8340-3e6d3a155215
-# ╟─2f2b1b7f-05a0-449a-bc29-0d2204fdd2f6
-# ╠═1d746ebb-03db-4bfb-a10b-ffc0a2a3b124
-# ╟─97587d11-3cab-47d8-bd6f-779195da40a5
-# ╟─284be63b-61e9-45f9-8bde-0a654107d0eb
-# ╠═1ebd13e2-dd4a-4bdc-b5de-c1aefe1cac26
-# ╠═cb332288-3b87-4dd7-8041-d1caea555879
-# ╠═ec4cc343-7bbc-4824-ab1f-9d19629331ed
-# ╟─be317312-cf38-4171-b2da-3d1282179088
-# ╟─dbc582ea-d72c-498b-8cb4-0d19b6d87458
-# ╟─36b9e359-c861-43fc-9a87-19e30afd5b24
-# ╟─9f9c29a9-5213-4547-8c67-be914a39be15
-# ╠═bd12b86d-01fe-454a-b1af-05b3bc7f8754
-# ╟─cb7d9e99-c183-42b0-a345-69d4a89416e7
-# ╟─3baed477-300c-491f-b88c-64427f8f42a6
+# ╟─0f090deb-7474-407e-a38b-30f801133068
+# ╠═90f38830-810a-11ef-0e1c-c73d0a0e2627
+# ╟─4a2a4dc6-acb1-46a7-838b-bcb2ff21e853
+# ╠═2d959533-55c2-49d9-9294-93bd310b8d24
+# ╠═6e788b9d-baeb-48e0-8a0f-0090cb43efe4
+# ╠═f8815c17-998b-4302-b2ce-ce3a67ddbaef
+# ╠═adef4b17-7305-417e-a66a-1d4b4d479362
+# ╠═52ad17cf-8b6d-4f5d-a40c-0445e1544ce1
+# ╠═903cf688-46a0-414c-9ec6-cdf89fbc0df9
+# ╠═6eb300af-8475-4a91-b238-4c1b8d6d6551
+# ╠═33660708-e439-483f-af82-5013a6844be5
+# ╠═3265f22c-4c69-44cd-a3d6-bbe42844112c
+# ╠═f36a9171-fd93-42e7-90cd-1e00d65dfbd5
+# ╠═8c3ca599-4da2-45e5-b256-32497a553f9c
+# ╠═566b9195-2410-49bc-99d4-0aa2a41a7a5b
+# ╠═a5a3d157-9d2d-4c37-a5df-48ee9b1dcd22
+# ╠═e17489b7-dc49-462e-bacc-5ba3b05ca365
+# ╠═fe999cfa-b303-4141-967b-f8f3185fe0f2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
