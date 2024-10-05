@@ -8,11 +8,14 @@ using InteractiveUtils
 using CSV, DataFrames, LinearAlgebra, Plots, Statistics, StatsBase, StatsPlots, Distances, MultivariateStats, HypothesisTests, Distributions, GLM, MLJModels, MLJ
 
 # ╔═╡ eb732ef3-1da9-40df-8b6d-f0328b733050
-include("plotting_functions.jl")
+begin
+include("src/plotting_functions.jl")
+include("src/data_clean.jl")
+end
 
 # ╔═╡ 2975901e-a4b6-4393-8339-38d7ff80ef5a
 md"""
-# Processed.va.data  (Long Beach) -Imputed with MLJ.FillImputer
+# Processed.va.data  (Long Beach) -Imputed with MLJ.FillImputer (git)
 notes:
 - not only has missing values but outlier values beyond the range of variable (i.e. :oldpeak has negative values)
 - here heart disease is catergorised as 0 to 4 (5 categories)
@@ -47,13 +50,13 @@ Here I have imputed it with the MLJ.FillImputer model
 
 # ╔═╡ e35db66a-8191-482b-a095-e85e206ed159
 begin
-dftr= CSV.read("heart.dat", DataFrame)
+dftr= CSV.read("data/ds1/heart.dat", DataFrame)
 rename!(dftr, names(dftr) .=> column_names)
 end
 
 # ╔═╡ ed49b262-f9b2-45fa-a60e-224616d2aba2
 begin
-df1= CSV.read("processed.va.data", DataFrame)
+df1= CSV.read("data/ds2/processed.va.data", DataFrame)
 rename!(df1, names(df1) .=> column_names)
 end
 
@@ -81,19 +84,18 @@ total_question_marks = sum(length, values(positions))
 println("Total number of '?' characters: ", total_question_marks)
 end
 
-# ╔═╡ bedaebc3-4947-4e14-b0f6-d32cee45995a
-
+# ╔═╡ f3d8ec71-a9e5-4b65-8e72-75fb1d477bb1
+#this is not an elegant way to do this
 begin
-for col in names(df1)
-    if eltype(df1[!, col]) <: AbstractString
-        df1[!, col] = convert(Vector{Union{String, Missing}}, df1[!, col])
-    end
-end
-
-# Replace "?" with missing
-for col in eachcol(df1)
-    replace!(col, "?" => missing)
-end
+df1.fbs = map(x ->clean_value(x, Float64), df1.fbs)
+df1.trestbps = map(x ->clean_value(x, Float64), df1.trestbps)
+df1.chol= map(x ->clean_value(x, Float64), df1.chol)
+df1.oldpeak=  map(x ->clean_value(x, Float64), df1.oldpeak)
+df1.maxhr= 	map(x ->clean_value(x, Float64), df1.maxhr)
+df1.exang= 	map(x ->clean_value(x, Float64), df1.exang)
+df1.slop= map(x ->clean_value(x, Float64), df1.slop)
+df1.thal= map(x ->clean_value(x, Float64), df1.thal)
+df1.ca = map(x ->clean_value(x, Float64), df1.ca)
 end
 
 # ╔═╡ a18a2ef3-fa39-4544-8790-707a7f18ebf2
@@ -143,63 +145,66 @@ The below visualisation show the difference between the imputed histograms and t
 
 # ╔═╡ b9982b5e-b5ca-4ae6-a30a-5cd7438bdfe7
 begin
-
-histogram(dfte.trestbps, title="Original Data - trestbps", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.trestbps, label="Imputed", alpha=0.5)
+bps1=histogram(dfte.trestbps, title="Original Data Vs Imputed- trestbps", label="Original", alpha=0.5, legend=:topright)
+bps2=histogram(dfteNew.trestbps, label="Imputed", alpha=0.5, color=:red)
+plot(bps1, bps2, layout=(2,1))
 end
 
 # ╔═╡ 744b2e23-8a8b-4024-aea7-56d12a584224
 begin
-
-histogram(dfte.chol, title="Original Data - chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.chol, label="Imputed", alpha=0.5)
+chol1=histogram(dfte.chol, title="Original Data Vs Imputed- chol", label="Original", alpha=0.5, legend=:topright)
+chol2=histogram(dfteNew.chol, color=:red, label="Imputed", alpha=0.5)
+plot(chol1, chol2, layout=(2,1))
 end
 
 # ╔═╡ 739ec46e-12a2-4c6b-b432-c98b5c143ae6
 begin
-
-histogram(dfte.fbs, title="Original Data - fbs", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.fbs, label="Imputed", alpha=0.5)
+fbs1=histogram(dfte.fbs, title="Original Data - fbs", label="Original", alpha=0.5, legend=:topright)
+fbs2=histogram(dfteNew.fbs, label="Imputed", color=:red, alpha=0.5)
+	plot(fbs1, fbs2, layout=(2,1))
 end
 
 # ╔═╡ d40cac11-24a9-487a-9a60-f8ec6d89a3c5
 begin
 
-histogram(dfte.maxhr, title="Original Data - maxhr", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.maxhr, label="Imputed", alpha=0.5)
+max1=histogram(dfte.maxhr, title="Original Data Vs Imputed- maxhr", label="Original", alpha=0.5, legend=:topright)
+max2=histogram(dfteNew.maxhr, color=:red, label="Imputed", alpha=0.5)
+plot(max1, max2, layout=(2,1))
 end
 
 # ╔═╡ 6fef8484-3060-4118-913a-e13812375447
 begin
-
-histogram(dfte.exang, title="Original Data - exang", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.exang, label="Imputed", alpha=0.5)
+ex1=histogram(dfte.exang, title="Original Data Vs Imputed - exang", label="Original", alpha=0.5, legend=:topright)
+ex2=histogram(dfteNew.exang, color=:red,label="Imputed", alpha=0.5)
+plot(ex1, ex2, layout=(2,1))
 end
 
 # ╔═╡ 9b315c76-ae0f-4182-b2a2-7a88b26970c8
 begin
-
-histogram(dfte.oldpeak, title="Original Data - oldpeak", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.oldpeak, label="Imputed", alpha=0.5)
+old1=histogram(dfte.oldpeak, title="Original Data Vs Imputed - oldpeak", label="Original", alpha=0.5, legend=:topright)
+old2=histogram(dfteNew.oldpeak, color=:red,label="Imputed", alpha=0.5)
+plot(old1, old2, layout=(2,1))
 end
 
 # ╔═╡ bba953cd-bc7b-4fa7-9fe7-b12b9c97db82
 begin
-
-histogram(dfte.slop, title="Original Data - slop", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.slop, label="Imputed", alpha=0.5)
+slop1=histogram(dfte.slop, title="Original Data Vs Imputed- slop", label="Original", alpha=0.5, legend=:topright)
+slop2=histogram(dfteNew.slop, label="Imputed", color=:red, alpha=0.5)
+plot(slop1, slop2, layout=(2,1))
 end
 
 # ╔═╡ df0b8da7-dd00-4c4a-a30d-8412be815b2f
 begin
-histogram(dfte.ca, title="Original Data - Ca", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.ca, label="Imputed", alpha=0.5)
+ca1=histogram(dfte.ca, title="Original Data Vs Imputed- Ca", label="Original", alpha=0.5, legend=:topright)
+ca2=histogram(dfteNew.ca, label="Imputed", color=:red,alpha=0.5)
+plot(ca1, ca2, layout=(2,1))
 end
 
 # ╔═╡ 76d48922-48e8-4483-b60c-1a400b4be18d
 begin
-histogram(dfte.thal, title="Original Data - Thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(dfteNew.thal, label="Imputed", alpha=0.5)
+thal1=histogram(dfte.thal, title="Original Data Vs Imputed- Thal", label="Original", alpha=0.5, legend=:topright)
+thal2=histogram(dfteNew.thal, label="Imputed", color=:red,alpha=0.5)
+plot(thal1, thal2, layout=(2,1))
 end
 
 # ╔═╡ 57750f74-2b27-45d2-b300-a2079cfa2a63
@@ -2049,7 +2054,7 @@ version = "1.4.1+1"
 # ╠═18969543-35f0-4770-ad13-2a363d612f98
 # ╠═8b5988ed-2e3b-4633-bc56-58d91c545d2e
 # ╠═72053ed6-99e2-466a-933d-91448e4af344
-# ╠═bedaebc3-4947-4e14-b0f6-d32cee45995a
+# ╠═f3d8ec71-a9e5-4b65-8e72-75fb1d477bb1
 # ╠═a18a2ef3-fa39-4544-8790-707a7f18ebf2
 # ╠═515482df-811e-41e1-88f2-a4682e20103d
 # ╠═929f0051-67f7-4e9d-9dc6-2d17521fdd3d
@@ -2058,16 +2063,16 @@ version = "1.4.1+1"
 # ╠═63b105cb-b10c-454e-bb80-cf2e7d47f607
 # ╠═4fb2e6db-cf79-4489-8a89-6a9894afd9fd
 # ╠═fd565b06-a05b-4ae9-a4a0-f1f16b3cdf09
-# ╠═198d7a78-8eca-4ae7-8a5d-1a452782f38c
-# ╟─b9982b5e-b5ca-4ae6-a30a-5cd7438bdfe7
-# ╟─744b2e23-8a8b-4024-aea7-56d12a584224
-# ╟─739ec46e-12a2-4c6b-b432-c98b5c143ae6
+# ╟─198d7a78-8eca-4ae7-8a5d-1a452782f38c
+# ╠═b9982b5e-b5ca-4ae6-a30a-5cd7438bdfe7
+# ╠═744b2e23-8a8b-4024-aea7-56d12a584224
+# ╠═739ec46e-12a2-4c6b-b432-c98b5c143ae6
 # ╠═d40cac11-24a9-487a-9a60-f8ec6d89a3c5
-# ╟─6fef8484-3060-4118-913a-e13812375447
-# ╟─9b315c76-ae0f-4182-b2a2-7a88b26970c8
-# ╟─bba953cd-bc7b-4fa7-9fe7-b12b9c97db82
-# ╟─df0b8da7-dd00-4c4a-a30d-8412be815b2f
-# ╟─76d48922-48e8-4483-b60c-1a400b4be18d
+# ╠═6fef8484-3060-4118-913a-e13812375447
+# ╠═9b315c76-ae0f-4182-b2a2-7a88b26970c8
+# ╠═bba953cd-bc7b-4fa7-9fe7-b12b9c97db82
+# ╠═df0b8da7-dd00-4c4a-a30d-8412be815b2f
+# ╠═76d48922-48e8-4483-b60c-1a400b4be18d
 # ╠═57750f74-2b27-45d2-b300-a2079cfa2a63
 # ╟─400e03a4-63d4-4e80-9eff-9944262883c7
 # ╟─00000000-0000-0000-0000-000000000001
