@@ -15,7 +15,7 @@ end
 
 # ╔═╡ 2975901e-a4b6-4393-8339-38d7ff80ef5a
 md"""
-# Processed.switzerland.data
+# Processed.switzerland.data (git)
 notes:
 - not only has missing values but outlier values beyond the range of variable (i.e. :oldpeak has negative values)
 - here heart disease is catergorised as 0 to 4 (5 categories)
@@ -23,9 +23,6 @@ notes:
 - missing 270 values
 - 15 % missing in total.
 """
-
-# ╔═╡ 753131d0-6442-4210-be95-df112b009f41
-
 
 # ╔═╡ ce8989ea-1b0a-4a25-ab62-f7029b28e836
 	begin
@@ -51,7 +48,7 @@ notes:
 begin
 dftr= CSV.read("data/ds1/heart.dat", DataFrame)
 rename!(dftr, names(dftr) .=> column_names)
-dftr = coerce(dftr, :heartdis => MLJ.Continuous)
+
 end
 
 # ╔═╡ ed49b262-f9b2-45fa-a60e-224616d2aba2
@@ -231,9 +228,6 @@ for col in names(df1)
 		println(t_test_result)
     end
 end
-
-# ╔═╡ 575fded3-b2a8-4e19-a155-3cc041f90a40
-
 
 # ╔═╡ 400e03a4-63d4-4e80-9eff-9944262883c7
 md"""
@@ -2062,10 +2056,9 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─2975901e-a4b6-4393-8339-38d7ff80ef5a
+# ╠═2975901e-a4b6-4393-8339-38d7ff80ef5a
 # ╠═07bbea30-8105-11ef-2fd5-1be93aae21b1
 # ╠═eb732ef3-1da9-40df-8b6d-f0328b733050
-# ╠═753131d0-6442-4210-be95-df112b009f41
 # ╟─ce8989ea-1b0a-4a25-ab62-f7029b28e836
 # ╠═e35db66a-8191-482b-a095-e85e206ed159
 # ╠═ed49b262-f9b2-45fa-a60e-224616d2aba2
@@ -2095,7 +2088,6 @@ version = "1.4.1+1"
 # ╟─df0b8da7-dd00-4c4a-a30d-8412be815b2f
 # ╟─f01af2fb-a93e-46cb-bccf-71f2dc893015
 # ╠═57750f74-2b27-45d2-b300-a2079cfa2a63
-# ╠═575fded3-b2a8-4e19-a155-3cc041f90a40
 # ╟─400e03a4-63d4-4e80-9eff-9944262883c7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
