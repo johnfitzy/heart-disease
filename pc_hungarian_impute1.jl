@@ -15,12 +15,15 @@ using Impute
 using MLJModels, MLJ
 
 # ╔═╡ fb69ca3f-7736-4e57-b480-0c4d555709da
-include("plotting_functions.jl")
+include("src/plotting_functions.jl")
+
+# ╔═╡ 19bed044-6824-4bf5-a2dc-e24285424642
+include("src/data_clean.jl")
 
 # ╔═╡ 7a6f6b42-9d94-491b-95d3-d3c1e9f40962
 md"""
 
-# Processed.Hungarian.data - Imputed with mean chain imputation (test) and MLJModel.FillInputer
+# Processed.Hungarian.data - Imputed with mean chain imputation (test) and MLJModel.FillInputer (git)
 
 - heart disease catergorised as binary 0 or 1
 - 293 rows x 14 = 4102 data points
@@ -29,7 +32,7 @@ md"""
 """
 
 # ╔═╡ b7c8bb92-442f-4306-a343-d4fb74092c1c
-df1 =CSV.read("processed.hungarian.data", DataFrame)
+df1 =CSV.read("data/ds2/processed.hungarian.data", DataFrame)
 
 # ╔═╡ 25355125-ef7b-4401-8184-31f78fe0cf01
 describe(df1)
@@ -76,16 +79,16 @@ end
 
 # ╔═╡ 215fafec-15a2-4e93-b449-0556630ebf47
 begin
-for col in names(df1)
-    if eltype(df1[!, col]) <: AbstractString
-        df1[!, col] = convert(Vector{Union{String, Missing}}, df1[!, col])
-    end
-end
-
-# Replace "?" with missing
-for col in eachcol(df1)
-    replace!(col, "?" => missing)
-end
+df1.fbs = map(x ->clean_value(x, Float64), df1.fbs)
+df1.trestbps = map(x ->clean_value(x, Float64), df1.trestbps)
+df1.chol= map(x ->clean_value(x, Float64), df1.chol)
+df1.oldpeak=  map(x ->clean_value(x, Float64), df1.oldpeak)
+df1.maxhr= 	map(x ->clean_value(x, Float64), df1.maxhr)
+df1.restecg= map(x ->clean_value(x, Float64), df1.restecg)
+df1.exang= 	map(x ->clean_value(x, Float64), df1.exang)
+df1.slop= map(x ->clean_value(x, Float64), df1.slop)
+df1.thal= map(x ->clean_value(x, Float64), df1.thal)
+df1.ca = map(x ->clean_value(x, Float64), df1.ca)
 end
 
 # ╔═╡ 84490848-3800-4352-aaa1-f9845eb6f55c
@@ -183,7 +186,7 @@ md"""
 # ╔═╡ 54809a97-f438-4736-aaea-9efc0694d7e6
 # Using original dataset to train
 begin
-dftr= CSV.read("heart.dat", DataFrame)
+dftr= CSV.read("data/ds1/heart.dat", DataFrame)
 rename!(dftr, names(dftr) .=> column_names)
 end
 
@@ -232,59 +235,35 @@ Comparing histograms on all the attributes with missing values, comparing the me
 
 # ╔═╡ 7765d11a-7950-4329-b6d8-6fcb11917b6f
 begin
-histo= []	
-subplot1=histogram(df1.chol, title="Original Vs Imputed - Chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplot1, df_imp1.chol, label="Chain Imputed", alpha=0.5)
+chol1=histogram(dfte.chol, label="Original", alpha=0.5, legend=:topright)
+chol2=histogram(dfteNew.chol, label="FillImputed", color=:red, alpha=0.5)
+plot(chol1, chol2, layout= (1,2),size =(600, 300), title= "Chol", titlefontsize=10, legendfontsize=8)
 
-subplot2= histogram(df1.chol, title="Original Vs Imputed - Chol", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplot2, dfteNew.chol, label="FillImputed", alpha=0.5)
-push!(histo, subplot1, subplot2)
-plot((histo...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8) 
 end
-
-# ╔═╡ 583fc0ab-2391-44ac-9779-8597f5b4d4aa
-
-histogram(dftr.ca, title="Original Data - ca", label="Original") 
-
 
 # ╔═╡ f688349f-3251-47c7-a18e-26a0fc57d679
 begin
-histo_ca= []	
-subplotca1=histogram(df1.ca, title="Original Vs Imputed - Ca Vessels", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotca1, df_imp1.ca, label="Chain Imputed", alpha=0.5)
+ca1=histogram(dfte.ca, label="Original", alpha=0.5, legend=:topright)
+ca2=histogram(dfteNew.ca, label="FillImputed", color=:red, alpha=0.5)
+plot(ca1, ca2, layout= (1,2),size =(600, 300), title= "Ca",titlefontsize=10, legendfontsize=8)
 
-subplotca2= histogram(df1.ca, title="Original Vs Imputed - Ca Vessels", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotca2, dfteNew.ca, label="FillImputed", alpha=0.5)
-push!(histo_ca, subplotca1, subplotca2)
-plot((histo_ca...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8) 
 end
 
 # ╔═╡ d6b5d77a-a2bf-462a-a3ab-34e4c2f39132
 begin
-histo_thal= []	
-subplotthal1=histogram(df1.thal, title="Original Vs Imputed- thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotthal1, df_imp1.thal, label="Chain Imputed", alpha=0.5)
+thal1=histogram(dfte.thal, label="Original", alpha=0.5, legend=:topright)
+thal2=histogram(dfteNew.thal, label="FillImputed", color=:red, alpha=0.5)
+plot(thal1, thal2, layout= (1,2),size =(600, 300), title= "Thal", titlefontsize=10, legendfontsize=8)
 
-subplotthal2= histogram(df1.thal, title="Original Vs Imputed- thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotthal2, dfteNew.thal, label="FillImputed", alpha=0.5)
-push!(histo_thal, subplotthal1, subplotthal2)
-
-plot((histo_thal...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8)
 end
-
 
 
 # ╔═╡ 49b7e5a7-d7ab-4062-9c86-c26c4da1eb4b
 begin
-histo_slop= []	
-subplotslop1=histogram(df1.slop, title="Original Data - slop", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotslop1, df_imp1.slop, label="Chain Imputed", alpha=0.5)
+slop1=histogram(dfte.slop, label="Original", alpha=0.5, legend=:topright)
+slop2=histogram(dfteNew.slop, label="FillImputed", color=:red, alpha=0.5)
+plot(slop1, slop2, layout= (1,2),size =(600, 300), title= "Slop", titlefontsize=10, legendfontsize=8)
 
-subplotslop2= histogram(df1.slop, title="Original Data - thal", label="Original", alpha=0.5, legend=:topright)
-histogram!(subplotslop2, dfteNew.thal, label="FillImputed", alpha=0.5)
-push!(histo_slop, subplotslop1, subplotslop2)
-
-plot((histo_slop...), layout= (1,2), size =(600, 300), titlefontsize=10, legendfontsize=8)
 end
 
 # ╔═╡ 6ab458e3-9365-4104-8aef-f331643a8a2d
@@ -2217,6 +2196,7 @@ version = "1.4.1+1"
 # ╟─7a6f6b42-9d94-491b-95d3-d3c1e9f40962
 # ╠═67248250-80d5-11ef-3f17-e59ced2d6e2f
 # ╠═fb69ca3f-7736-4e57-b480-0c4d555709da
+# ╠═19bed044-6824-4bf5-a2dc-e24285424642
 # ╠═b7c8bb92-442f-4306-a343-d4fb74092c1c
 # ╠═25355125-ef7b-4401-8184-31f78fe0cf01
 # ╟─59837273-573c-4aa9-8fd7-0d2631a99c92
@@ -2250,7 +2230,6 @@ version = "1.4.1+1"
 # ╠═b7db1579-d08c-4ebe-912a-50d45f7b8df1
 # ╟─b858e89a-5bd5-4079-b5d0-ee8514971747
 # ╟─7765d11a-7950-4329-b6d8-6fcb11917b6f
-# ╟─583fc0ab-2391-44ac-9779-8597f5b4d4aa
 # ╟─f688349f-3251-47c7-a18e-26a0fc57d679
 # ╟─d6b5d77a-a2bf-462a-a3ab-34e4c2f39132
 # ╟─49b7e5a7-d7ab-4062-9c86-c26c4da1eb4b
