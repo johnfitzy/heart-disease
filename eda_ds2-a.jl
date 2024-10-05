@@ -4,13 +4,25 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
+# ╔═╡ 9567bbf2-d953-492d-b3f0-489fab9376e7
+# load dependencies and helper functions
+begin
+	using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
 
-# ╔═╡ 956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-include("src/plotting_functions.jl")
+	include("src/plotting_functions.jl")
+	include("src/data_clean.jl")
+end
 
-# ╔═╡ 366b8da3-eb10-4a43-abf6-ad1beb5d74b6
+# ╔═╡ 6f23dbc8-82a0-11ef-1ea4-7de9c1060469
+md"""
+# EDA - DS2 (Part A)
+## Purpose: 
+- Initial look at the data in three other files
+- See the state of missing values in the datasets
+"""
+
+# ╔═╡ 825f9e29-1b46-4cd1-905b-a7bb6ee6f31c
+# Load in files
 begin
 	
 	# Define the column names
@@ -31,321 +43,203 @@ begin
     	"heart_disease"
 	]
 
-	# Open file as CSV
-	df = CSV.read("data/DS2/processed.cleveland.data", 
+
+	# Open files
+	df_clev = CSV.read("data/DS2/processed.cleveland.data", 
 		header=column_names, DataFrame) 
 
+	df_hung = CSV.read("data/DS2/processed.hungarian.data", 
+		header=column_names, DataFrame) 
+
+	df_swiss = CSV.read("data/DS2/processed.switzerland.data", 
+		header=column_names, DataFrame) 
+
+	df_lng_beach = CSV.read("data/DS2/processed.va.data", 
+		header=column_names,
+		DataFrame)
+
 end
 
-# ╔═╡ ed55cc30-d877-4289-bfaa-6200b2287f2b
-size(df)
+# ╔═╡ 9d178d57-3c9f-42d2-8be7-bef72e7ecf63
+begin
+	function missing_datapoints_percent(df::DataFrame)
+		col_size = size(df)[1]
+		return [(count(x -> ismissing(x) || x == "?", 
+			df[!, col]) / col_size) * 100 for col in names(df)]
+	end
+end
 
-# ╔═╡ 525a0646-d2c5-4a1e-be73-ac4f8032171a
+# ╔═╡ aabd1b26-19b3-4591-bf0c-1585f24ce4cc
 md"""
-## Feature Analysis: Sex
+## Quick look at the data
 """
 
-# ╔═╡ dccf5d92-d1a1-4f50-a27f-84b393f95323
-describe(df.age)
+# ╔═╡ cafd9196-b39e-476a-9749-8266a10af465
+df_clev
 
-# ╔═╡ 24803bbf-7d98-4741-a99d-810812a25334
+# ╔═╡ 2b0080dc-6320-4c23-b05b-9f6041eef2bf
+df_hung
+
+# ╔═╡ 6d4855e6-a013-46e3-8a4c-00805fbae0d5
+df_swiss
+
+# ╔═╡ 7fd9e68e-9ce9-4854-a30f-ba5a36341aeb
+df_lng_beach
+
+# ╔═╡ 0fbee3ba-de76-4213-b41e-cf8abcdcd62b
+md"""
+### Comments on quick look
+- All three files have at least one column that has the data points as Strings instead of the types they should be such as Int or Float. 
+- This is easyly fixed by casting valid Strings to the correct types
+- All three files have missing data points either as `missing` type, or as the String "?"
+"""
+
+# ╔═╡ 9d6c57b6-e327-4397-a99f-f71196166848
+md"""
+### How much data is missing?
+"""
+
+# ╔═╡ 5a3b798d-e364-4804-9b72-27db24d60bbe
 begin
-	create_binary_bar_plot(
-		data=df.sex, 
-		title_text="Sex Distribution (Percentage)",
-		xlabel_text="Sex",
-		ylabel_text="Count",
-		labels=["Male", "Female"]		
+
+	# Get percentage of missing datapoints per feature
+	clev_missing = missing_datapoints_percent(df_clev)
+
+	# Plot the percentage of missing data points per feature
+	bar( 
+		clev_missing, 
+		legend=false, 
+		xlabel="Features", 
+		ylabel="Percentage Missing", 
+		title="Percentage of data missing in Cleveland Dataset", 
+		orientation=:vertical, 
+		xticks=1:size(clev_missing)[1]
+	)
+
+
+end
+
+# ╔═╡ af000366-be8b-4e93-93bb-5b2e11f2f87e
+begin
+
+	# Get percentage of missing datapoints per feature
+	missing_hung = missing_datapoints_percent(df_hung)
+	
+	# Plot the percentage of missing data points per feature
+	bar( 
+		missing_hung, 
+		legend=false, 
+		xlabel="Features", 
+		ylabel="Percentage Missing", 
+		title="Percentage of data missing in Hungarian Dataset", 
+		orientation=:vertical, 
+		xticks=1:size(missing_hung)[1]
 	)
 end
 
-# ╔═╡ d81d784b-d417-4193-a2a2-6c72db0867e0
-md"""
-## Feature Analysis: Age
-"""
-
-# ╔═╡ ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
-describe(df.age)
-
-# ╔═╡ 7a319498-f455-4bad-b701-9c7842f2409e
+# ╔═╡ bf0857f1-7a76-433c-9079-45526d4b49e3
 begin
-	create_hist_density_plot(df.age, 
-    	"Age Distribution", 
-        "Density Plot of Age", 
-        "Age", 
-    	"Frequency", 
-        "Age", 
-        "Density"
+
+	# Get percentage of missing datapoints per feature
+	missing_swiss = missing_datapoints_percent(df_swiss)
+	
+	# Plot the percentage of missing data points per feature
+	bar( 
+		missing_swiss, 
+		legend=false, 
+		xlabel="Features", 
+		ylabel="Percentage Missing", 
+		title="Percentage of data missing in Swiss Dataset", 
+		orientation=:vertical, 
+		xticks=1:size(clev_missing)[1]
 	)
 end
 
-# ╔═╡ f61d891e-6f86-4019-8c64-a821416010c3
+# ╔═╡ 999df9ee-2e33-4552-99b2-dd91db92ec28
 begin
-	# Plot violin dot and box plot for age
-	create_combined_plot(df.age, "Age Violin, Dot and Box Plot", "Frequency", "Age")
 
-end
-
-# ╔═╡ 401d0182-3c6a-4597-b618-4ddc94ec8ac1
-begin
-	# Plot QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.age, "QQ Plot of Age")
-end
-
-# ╔═╡ 96e6ec73-d165-421c-98dd-746b3a9d16e0
-md"""
-## Feature Analysis: Chest Pain
-"""
-
-# ╔═╡ 546a4301-90eb-48b2-8544-a49adb7bbb1f
-describe(df.chest_pain)
-
-# ╔═╡ a13ed2b2-a21b-4d60-975c-50e39aa2d10f
-begin
-	create_bar_plot(
-    	data=df.chest_pain, 
-    	labels=["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"],
-    	values_to_extract=[1, 2, 3, 4], 
-    	plot_title="Chest Pain Distribution", 
-    	xlabel_text="Chest Pain Type", 
-    	ylabel_text="Count"
+	# Get percentage of missing datapoints per feature
+	missing_lng_beach = missing_datapoints_percent(df_lng_beach)
+	
+	# Plot the percentage of missing data points per feature
+	bar( 
+		missing_lng_beach, 
+		legend=false, 
+		xlabel="Features", 
+		ylabel="Percentage Missing", 
+		title="Percentage of data missing in Long Beach Dataset", 
+		orientation=:vertical, 
+		xticks=1:size(clev_missing)[1]
 	)
 end
 
-# ╔═╡ 392572bf-7261-4ba1-9a55-7336f4c39de6
+# ╔═╡ b187af11-97e5-4e14-a7b3-9227f18b67ea
+println(missing_lng_beach)
+
+# ╔═╡ 58a86246-3109-4190-a62a-e4fc3c955b21
 md"""
-## Feature Analysis: Resting Blood Presure	
+### Comment on missing data
+
+#### Feature mapping:
+
+| Feature Number | Feature Name           |
+|----------------|------------------------|
+| 1              | age                    |
+| 2              | sex                    |
+| 3              | chest_pain             |
+| 4              | rest_bp                |
+| 5              | serum_chol             |
+| 6              | fasting_blood_sugar    |
+| 7              | electrocardiographic   |
+| 8              | max_heart_rate         |
+| 9              | angina                 |
+| 10             | oldpeak                |
+| 11             | slope                  |
+| 12             | major_vessels          |
+| 13             | thal                   |
+| 14             | heart_disease          |
+
+##### Cleveland
+- `major_vessels` has only 1.32% missing
+- `thal` has only 0.66% missing
+##### Hungarian
+Lots more missing data here
+- `rest_bp` has 0.34% missing
+- `serum_chol` has 7.82% missing
+- `fasting_blood_sugar` has 2.72% missing
+- `electrocardiographic` has 0.34% missing
+- `max_heart_rate` has 0.34% missing
+- `angina` has 0.34% missing
+- `slope` has 64.63% missing
+- `major_vessels` has 98.98% missing
+- `thal` has 90.48% missing
+#### Swiss 
+Lots more missing data here
+- `rest_bp` has 1.63% missing
+- `fasting_blood_sugar` has 60.98% missing
+- `electrocardiographic` has 0.81% missing
+- `max_heart_rate` has 0.81% missing
+- `angina` has 0.81% missing
+- `oldpeak` has 4.88% missing
+- `slope` has 13.82% missing
+- `major_vessels` has 95.93% missing
+- `thal` has 42.28% missing
+
+#### Long Beach
+- `rest_bp` has 28.0% missing
+- `serum_chol` has 3.5% missing
+- `fastingbloodsugar` has 3.5% missing
+- `maxheartrate` has 26.5% missing
+- `angina` has 26.5% missing
+- `oldpeak` has 28.0% missing
+- `slope` has 51.0% missing
+- `major_vessels` has 99.0% missing
+- `thal` has 83.0% missing
+
+---
+
+We can see that both the Hungarian and the Swiss processed datasets have many missing values for certian feature. This is will require imputation. Given that there are so many missing values it is uncertian at this points if some of these features will be usable. 
 """
-
-# ╔═╡ 7e1cf2a8-d746-4e10-acce-4d1f18dc80ba
-describe(df.rest_bp	)
-
-# ╔═╡ 2e3bf110-607a-4d30-a7a4-a17725d8ddd9
-begin
-
-	create_hist_density_plot(df.rest_bp, 
-		"Blood Pressure Distribution",  # Title for the histogram
-        "Density Plot of Blood Pressure",  # Title for the density plot
-        "Blood Pressure",  # X-axis label for the histogram
-    	"Frequency",       # Y-axis label for the histogram
-        "Blood Pressure",  # X-axis label for the density plot
-        "Density")         # Y-axis label for the density plot
-
-end
-
-# ╔═╡ 8cf0d368-8f25-4a36-86db-69622dcc4772
-begin
-
-	create_combined_plot(df.rest_bp, 
-		"Resting Blood Presure Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Blood Presure")
-
-end
-
-# ╔═╡ d6ffc721-4493-4348-84b6-8ac3a6d33033
-begin
-	# QQ Plot to inspect distribution agains normal distribution
-	create_qqplot(df.rest_bp, "QQ Plot of Resting Blood Pressure")
-end
-
-# ╔═╡ fe4fc731-af80-48f4-b1e1-2ee388192cf9
-md"""
-## Feature Analysis: Serum Cholesterol
-"""
-
-# ╔═╡ f2808383-89dc-45ad-bfcd-90e9131600aa
-describe(df.serum_chol)
-
-# ╔═╡ 34387574-d4c7-48f7-98c3-9fe08e54e0be
-	create_hist_density_plot(df.serum_chol, 
-    	"Serum Cholesterol Distribution", 
-        "Density Plot of Serum Cholesterol", 
-        "cholesterol", 
-    	"Frequency", 
-        "Serum Cholesterol", 
-        "Density"
-	)
-
-# ╔═╡ 63dac896-2cb2-41a9-b5d3-4fc6ec053675
-create_combined_plot(df.serum_chol, 
-		"Serum Cholesterol Violin, Dot and Box Plot", 
-		"Frequency", 
-		"Serum Cholesterol")
-
-# ╔═╡ c353cece-9490-491f-9f7c-fbe6391d3e30
-create_qqplot(df.serum_chol, "QQ Plot of Serum Cholesterol")
-
-# ╔═╡ a6745162-4d48-452f-8a74-be8d61a7f0a2
-md"""
-## Feature Analysis: Fasting Blood Sugar > 120 mg/dL 
-"""
-
-# ╔═╡ a20d0fbe-ea0c-4d6d-9546-5103f7c1c132
-describe(df.fasting_blood_sugar)
-
-# ╔═╡ 56a570f5-d5cc-4204-b808-c5aef975838a
-create_binary_bar_plot(
-    data = df.fasting_blood_sugar, 
-    title_text = "Fasting Blood Sugar Distribution (Percentage)",  # Title of the plot
-    xlabel_text = "Fasting Blood Sugar",  # X-axis label
-    ylabel_text = "Count",       # Y-axis label
-    labels = ["Elevated", "Normal"]  # Labels for the binary categories
-)
-
-# ╔═╡ c1cf8e23-708d-469d-916b-4db839dccc2f
-md"""
-## Feature Analysis: Resting Electrocardiographic
-"""
-
-# ╔═╡ 66ca3fe7-82eb-4e7d-9222-f64f4955e56e
-describe(df.electrocardiographic)
-
-# ╔═╡ f915730f-56cc-4347-9e00-749a3071b149
-	create_bar_plot(
-    	data=df.electrocardiographic, 
-    	labels=["Normal", "ST-T Wave Abnormality", "Left Ventricular Hypertrophy"], 
-    	values_to_extract=[0, 1, 2], 
-    	plot_title="Resting Electrocardiographic Results Distribution", 
-    	xlabel_text="Electrocardiographic Type", 
-    	ylabel_text="Count"
-	)
-
-# ╔═╡ 5362ba76-bfb6-477e-bfc8-e776ed708e0e
-md"""
-## Feature Analysis: Angina with Exercise (exang)
-"""
-
-# ╔═╡ cb4f6884-0688-4a38-8e25-55347c0c5903
-describe(df.angina)
-
-# ╔═╡ c16373a7-037a-4fb6-89d4-f6d3bf779a29
-# Function call to create a percentage bar plot for df.angina
-create_binary_bar_plot(
-    data = df.angina, 
-    title_text = "Angina with Exercise Distribution (Percentage)",  # Title of the plot
-    xlabel_text = "Angina with Exercise",  # X-axis label
-    ylabel_text = "Percentage (%)",        # Y-axis label
-    labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
-)
-
-
-# ╔═╡ c2d385d6-5ca5-47e8-a679-cc3d10e6c51d
-md"""
-## Feature Analysis: Max Heart Rate
-"""
-
-# ╔═╡ 750c1095-2989-4986-b39a-f2cd448bb175
-describe(df.max_heart_rate)
-
-# ╔═╡ 04b3ee86-a65e-4398-93af-745864ab3ebc
-create_hist_density_plot(df.max_heart_rate, 
-                         "Max Heart Rate Distribution", 
-                         "Density Plot of Max Heart Rate", 
-                         "Max Heart Rate", 
-                         "Frequency", 
-                         "Max Heart Rate", 
-                         "Density")
-
-# ╔═╡ 7b9a00ac-47d5-44f9-a360-647e0a132e37
-# Combined Violin, Dot, and Box Plot for max_heart_rate
-create_combined_plot(df.max_heart_rate, 
-                     "Max Heart Rate Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Max Heart Rate")
-
-# ╔═╡ 98c37bbd-f106-426a-8b2d-5c81bf2ec4c9
-# QQ Plot for max_heart_rate
-create_qqplot(df.max_heart_rate, "QQ Plot of Max Heart Rate")
-
-# ╔═╡ f9b6d9d8-3abd-48ad-a385-ee97b67be387
-md"""
-## Feature Analysis: Oldpeak
-"""
-
-# ╔═╡ 7c0c8cd4-a6f3-40c0-bb4f-e34c6e590760
-describe(df.oldpeak)
-
-# ╔═╡ 079d5519-d64a-421b-8a8e-ee5da64f0600
-create_hist_density_plot(df.oldpeak, 
-                         "Oldspeak Distribution", 
-                         "Density Plot of Oldspeak", 
-                         "Oldspeak", 
-                         "Frequency", 
-                         "Oldspeak", 
-                         "Density"
-						)
-
-# ╔═╡ 769bc0e0-a54f-463f-a909-579a15316a87
-# Combined Violin, Dot, and Box Plot for oldpeak
-create_combined_plot(df.oldpeak, 
-                     "Oldpeak Violin, Dot, and Box Plot", 
-                     "Frequency", 
-                     "Oldpeak")
-
-# ╔═╡ a442e881-a1f6-4d6a-80ab-f268d1e03c16
-# QQ Plot for oldpeak
-create_qqplot(df.oldpeak, "QQ Plot of Oldpeak")
-
-# ╔═╡ 45ce1828-7079-4ac1-a17f-7d6571b190d7
-md"""
-## Feature Analysis: Slope
-"""
-
-# ╔═╡ 04a5ebb3-0106-4806-91ea-dc1517325953
-create_bar_plot(
-	data=df.slope, 
-    labels=["Upsloping", "Flat", "Downsloping"], 
-    values_to_extract=[1, 2, 3], 
-    plot_title="Slope of Peak Exercise ST Segment Distribution", 
-    xlabel_text="Slope Type", 
-    ylabel_text="Count"
-)
-
-# ╔═╡ 880f531e-1260-41ad-bcf2-18a008a5f957
-md"""
-## Feature Analysis: Major Vessels
-"""
-
-# ╔═╡ 8ceb6884-f710-4d72-96ec-314ee93643f5
-describe(df.major_vessels)
-
-# ╔═╡ 4048b1b6-90c1-49f0-8412-24c8400757e6
-df.major_vessels
-
-# ╔═╡ 66188fcc-44ea-414c-bc82-1be01738f5d6
-## TODO; need to convert major vessels to float
-
-# create_hist_density_plot(df.major_vessels, 
-#                          "Major Vessels Distribution", 
-#                          "Density Plot of Major Vessels", 
-#                          "Major Vessels", 
-#                          "Frequency", 
-#                          "Major Vessels", 
-#                          "Density", 4) # bins 5
-
-# ╔═╡ 6280cb26-646d-47aa-8b20-08e7b7d93ba0
-md"""
-## Feature Analysis: Thal
-"""
-
-# ╔═╡ cdfc5f74-eb28-4086-a23e-cb06ceba0a57
-describe(df.thal)
-
-# ╔═╡ da4c7dac-6a1d-4084-a933-7c21aa6f70a5
-df.thal
-
-# ╔═╡ 9402b7f0-54b8-45d7-bc20-27be2884a92a
-
-## TODO; need to convert thal to float
-# create_bar_plot(
-#     data=df.thal, 
-#     labels=["Normal", "Fixed Defect", "Reversible Defect"], 
-#     values_to_extract=[3, 6, 7], 
-#     plot_title="Thal Categories", 
-#     xlabel_text="Thal Type", 
-#     ylabel_text="Count"
-# )
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -360,9 +254,9 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 CSV = "~0.10.14"
-DataFrames = "~1.6.1"
-Distributions = "~0.25.111"
-Plots = "~1.40.5"
+DataFrames = "~1.7.0"
+Distributions = "~0.25.112"
+Plots = "~1.40.8"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
 """
@@ -373,7 +267,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "73675cfcd7f131bf0f2eb909940652e905a4787e"
+project_hash = "7bb234206d6699763fe2f37dd65ff37e08e5106e"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -455,9 +349,9 @@ version = "1.18.0+2"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
-git-tree-sha1 = "71acdbf594aab5bbb2cec89b208c41b4c411e49f"
+git-tree-sha1 = "3e4b134270b372f2ed4d4d0e936aabaefc1802bc"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.24.0"
+version = "1.25.0"
 weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
@@ -540,10 +434,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
 [[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "04c738083f29f86e62c8afc341f0967d8717bdb8"
+deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.6.1"
+version = "1.7.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -589,9 +483,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["AliasTables", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "e6c693a0e4394f8fda0e51a5bdf5aef26f8235e9"
+git-tree-sha1 = "d7477ecdafb813ddee2ae727afa94e9dcb5f3fb0"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.111"
+version = "0.25.112"
 
     [deps.Distributions.extensions]
     DistributionsChainRulesCoreExt = "ChainRulesCore"
@@ -634,9 +528,9 @@ version = "2.6.2+0"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
-git-tree-sha1 = "b57e3acbe22f8484b4b5ff66a7499717fe1a9cc8"
+git-tree-sha1 = "53ebe7511fa11d33bec688a9178fac4e49eeee00"
 uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
-version = "0.4.1"
+version = "0.4.2"
 
 [[deps.FFMPEG_jll]]
 deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
@@ -652,9 +546,9 @@ version = "1.8.0"
 
 [[deps.FFTW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "c6033cc3892d0ef5bb9cd29b7f2f0331ea5184ea"
+git-tree-sha1 = "4d81ed14783ec49ce9f2e168208a12ce1815aa25"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
-version = "3.3.10+0"
+version = "3.3.10+1"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates"]
@@ -741,9 +635,9 @@ version = "0.21.0+0"
 
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Zlib_jll"]
-git-tree-sha1 = "7c82e6a6cd34e9d935e9aa4051b66c6ff3af59ba"
+git-tree-sha1 = "674ff0db93fffcd11a3573986e550d66cd4fd71f"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.80.2+0"
+version = "2.80.5+0"
 
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -763,10 +657,10 @@ uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "1.10.8"
 
 [[deps.HarfBuzz_jll]]
-deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
+deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll"]
+git-tree-sha1 = "401e4f3f30f43af2c8478fc008da50096ea5240f"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+1"
+version = "8.3.1+0"
 
 [[deps.HypergeometricFunctions]]
 deps = ["LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
@@ -788,10 +682,10 @@ version = "1.4.2"
     Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 
 [[deps.IntelOpenMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "14eb2b542e748570b56446f4c50fbfb2306ebc45"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
+git-tree-sha1 = "10bd689145d2c3b2a9844005d01087cc1194e79e"
 uuid = "1d5cc7b8-4909-519e-a0f8-d0f5ad9712d0"
-version = "2024.2.0+0"
+version = "2024.2.1+0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -824,9 +718,9 @@ version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
-git-tree-sha1 = "a53ebe394b71470c7f97c2e7e170d51df21b17af"
+git-tree-sha1 = "39d64b09147620f5ffbf6b2d3255be3c901bec63"
 uuid = "1019f520-868f-41f5-a6de-eb00f4b6a39c"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -842,9 +736,9 @@ version = "0.21.4"
 
 [[deps.JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "c84a835e1a09b289ffcd2271bf2a337bbdda6637"
+git-tree-sha1 = "25ee0be4d43d0269027024d75a24c24d6c6e590c"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
-version = "3.0.3+0"
+version = "3.0.4+0"
 
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
@@ -866,15 +760,15 @@ version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e16271d212accd09d52ee0ae98956b8a05c4b626"
+git-tree-sha1 = "78211fb6cbc872f77cad3fc0b6cf647d923f4929"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "17.0.6+0"
+version = "18.1.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "70c5da094887fd2cae843b8db33920bac4b6f07d"
+git-tree-sha1 = "854a9c268c43b77b0a27f22d7fab8d33cdb3a731"
 uuid = "dd4b983a-f0e5-5f8d-a1b7-129d4a5fb1ac"
-version = "2.10.2+0"
+version = "2.10.2+1"
 
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
@@ -1051,10 +945,10 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2023.1.10"
 
 [[deps.MultivariateStats]]
-deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
-git-tree-sha1 = "68bf5103e002c44adfd71fea6bd770b3f0586843"
+deps = ["Arpack", "Distributions", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
+git-tree-sha1 = "816620e3aac93e5b5359e4fdaf23ca4525b00ddf"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
-version = "0.10.2"
+version = "0.10.3"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1064,9 +958,9 @@ version = "1.0.2"
 
 [[deps.NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
-git-tree-sha1 = "91a67b4d73842da90b526011fa85c5c4c9343fe0"
+git-tree-sha1 = "3cebfc94a0754cc329ebc3bab1e6c89621e791ad"
 uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.18"
+version = "0.4.20"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -1110,9 +1004,9 @@ version = "1.4.3"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "1b35263570443fdd9e76c76b7062116e2f374ab8"
+git-tree-sha1 = "7493f61f55a6cce7325f197443aa80d32554ba10"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "3.0.15+0"
+version = "3.0.15+1"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -1121,10 +1015,10 @@ uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
 version = "0.5.5+0"
 
 [[deps.Opus_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "6703a85cb3781bd5909d48730a67205f3f31a575"
 uuid = "91d4177d-7536-5919-b921-800302f37372"
-version = "1.3.2+0"
+version = "1.3.3+0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "dfdf5519f235516220579f949664f1bf44e741c5"
@@ -1144,9 +1038,9 @@ version = "0.11.31"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "cb5a2ab6763464ae0f19c86c56c63d4a2b0f5bda"
+git-tree-sha1 = "e127b609fb9ecba6f201ba7ab753d5a605d53801"
 uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
-version = "1.52.2+0"
+version = "1.54.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1184,9 +1078,9 @@ version = "1.4.1"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "082f0c4b70c202c37784ce4bfbc33c9f437685bf"
+git-tree-sha1 = "45470145863035bb124ca51b320ed35d071cc6c2"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.5"
+version = "1.40.8"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1222,9 +1116,9 @@ version = "1.4.3"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "66b20dd35966a748321d3b2537c4584cf40387c7"
+git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.3.2"
+version = "2.4.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1261,9 +1155,9 @@ version = "6.7.1+1"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
-git-tree-sha1 = "1d587203cf851a51bf1ea31ad7ff89eff8d625ea"
+git-tree-sha1 = "cda3b045cf9ef07a08ad46731f5a3165e56cf3da"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
-version = "2.11.0"
+version = "2.11.1"
 
     [deps.QuadGK.extensions]
     QuadGKEnzymeExt = "Enzyme"
@@ -1360,9 +1254,9 @@ uuid = "992d4aef-0814-514b-bc4d-f2e9a6c4116f"
 version = "1.0.3"
 
 [[deps.SimpleBufferStream]]
-git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
+git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
@@ -1443,9 +1337,9 @@ version = "0.15.7"
 
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
-git-tree-sha1 = "a04cabe79c5f01f4d723cc6704070ada0b9d46d5"
+git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
 uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
-version = "0.3.4"
+version = "0.4.0"
 
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
@@ -1585,9 +1479,9 @@ version = "1.6.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "d9717ce3518dc68a99e6b96300813760d887a01d"
+git-tree-sha1 = "1165b0443d0eca63ac1e32b8c0eb69ed2f4f8127"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.13.1+0"
+version = "2.13.3+0"
 
 [[deps.XSLT_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
@@ -1752,9 +1646,9 @@ version = "1.2.13+1"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e678132f07ddb5bfa46857f0d7620fb9be675d3b"
+git-tree-sha1 = "555d1076590a6cc2fdee2ef1469451f872d8b41b"
 uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
-version = "1.5.6+0"
+version = "1.5.6+1"
 
 [[deps.eudev_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gperf_jll"]
@@ -1764,9 +1658,9 @@ version = "3.2.9+0"
 
 [[deps.fzf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a68c9655fbe6dfcab3d972808f1aafec151ce3f8"
+git-tree-sha1 = "936081b536ae4aa65415d869287d43ef3cb576b2"
 uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
-version = "0.43.0+0"
+version = "0.53.0+0"
 
 [[deps.gperf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1781,10 +1675,10 @@ uuid = "a4ae2306-e953-59d6-aa16-d00cac43593b"
 version = "3.9.0+0"
 
 [[deps.libass_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "5982a94fcba20f02f42ace44b9894ee2b140fe47"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "e17c115d55c5fbb7e52ebedb427a0dca79d4484e"
 uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
-version = "0.15.1+0"
+version = "0.15.2+0"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1804,10 +1698,10 @@ uuid = "2db6ffa8-e38f-5e21-84af-90c45d0032cc"
 version = "1.11.0+0"
 
 [[deps.libfdk_aac_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "daacc84a041563f965be61859a36e17c4e4fcd55"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "8a22cf860a7d27e4f3498a0fe0811a7957badb38"
 uuid = "f638f0a6-7fb0-5443-88ba-1cc74229b280"
-version = "2.0.2+0"
+version = "2.0.3+0"
 
 [[deps.libinput_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "eudev_jll", "libevdev_jll", "mtdev_jll"]
@@ -1817,9 +1711,9 @@ version = "1.18.0+0"
 
 [[deps.libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "d7015d2e18a5fd9a4f47de711837e980519781a4"
+git-tree-sha1 = "b70c870239dc3d7bc094eb2d6be9b73d27bef280"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
-version = "1.6.43+1"
+version = "1.6.44+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
@@ -1869,59 +1763,22 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-# ╠═956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-# ╠═366b8da3-eb10-4a43-abf6-ad1beb5d74b6
-# ╠═ed55cc30-d877-4289-bfaa-6200b2287f2b
-# ╠═525a0646-d2c5-4a1e-be73-ac4f8032171a
-# ╠═dccf5d92-d1a1-4f50-a27f-84b393f95323
-# ╠═24803bbf-7d98-4741-a99d-810812a25334
-# ╠═d81d784b-d417-4193-a2a2-6c72db0867e0
-# ╠═ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
-# ╠═7a319498-f455-4bad-b701-9c7842f2409e
-# ╠═f61d891e-6f86-4019-8c64-a821416010c3
-# ╠═401d0182-3c6a-4597-b618-4ddc94ec8ac1
-# ╠═96e6ec73-d165-421c-98dd-746b3a9d16e0
-# ╠═546a4301-90eb-48b2-8544-a49adb7bbb1f
-# ╠═a13ed2b2-a21b-4d60-975c-50e39aa2d10f
-# ╠═392572bf-7261-4ba1-9a55-7336f4c39de6
-# ╠═7e1cf2a8-d746-4e10-acce-4d1f18dc80ba
-# ╠═2e3bf110-607a-4d30-a7a4-a17725d8ddd9
-# ╠═8cf0d368-8f25-4a36-86db-69622dcc4772
-# ╠═d6ffc721-4493-4348-84b6-8ac3a6d33033
-# ╠═fe4fc731-af80-48f4-b1e1-2ee388192cf9
-# ╠═f2808383-89dc-45ad-bfcd-90e9131600aa
-# ╠═34387574-d4c7-48f7-98c3-9fe08e54e0be
-# ╠═63dac896-2cb2-41a9-b5d3-4fc6ec053675
-# ╠═c353cece-9490-491f-9f7c-fbe6391d3e30
-# ╠═a6745162-4d48-452f-8a74-be8d61a7f0a2
-# ╠═a20d0fbe-ea0c-4d6d-9546-5103f7c1c132
-# ╠═56a570f5-d5cc-4204-b808-c5aef975838a
-# ╠═c1cf8e23-708d-469d-916b-4db839dccc2f
-# ╠═66ca3fe7-82eb-4e7d-9222-f64f4955e56e
-# ╠═f915730f-56cc-4347-9e00-749a3071b149
-# ╠═5362ba76-bfb6-477e-bfc8-e776ed708e0e
-# ╠═cb4f6884-0688-4a38-8e25-55347c0c5903
-# ╠═c16373a7-037a-4fb6-89d4-f6d3bf779a29
-# ╠═c2d385d6-5ca5-47e8-a679-cc3d10e6c51d
-# ╠═750c1095-2989-4986-b39a-f2cd448bb175
-# ╠═04b3ee86-a65e-4398-93af-745864ab3ebc
-# ╠═7b9a00ac-47d5-44f9-a360-647e0a132e37
-# ╠═98c37bbd-f106-426a-8b2d-5c81bf2ec4c9
-# ╠═f9b6d9d8-3abd-48ad-a385-ee97b67be387
-# ╠═7c0c8cd4-a6f3-40c0-bb4f-e34c6e590760
-# ╠═079d5519-d64a-421b-8a8e-ee5da64f0600
-# ╠═769bc0e0-a54f-463f-a909-579a15316a87
-# ╠═a442e881-a1f6-4d6a-80ab-f268d1e03c16
-# ╠═45ce1828-7079-4ac1-a17f-7d6571b190d7
-# ╠═04a5ebb3-0106-4806-91ea-dc1517325953
-# ╠═880f531e-1260-41ad-bcf2-18a008a5f957
-# ╠═8ceb6884-f710-4d72-96ec-314ee93643f5
-# ╠═4048b1b6-90c1-49f0-8412-24c8400757e6
-# ╠═66188fcc-44ea-414c-bc82-1be01738f5d6
-# ╠═6280cb26-646d-47aa-8b20-08e7b7d93ba0
-# ╠═cdfc5f74-eb28-4086-a23e-cb06ceba0a57
-# ╠═da4c7dac-6a1d-4084-a933-7c21aa6f70a5
-# ╠═9402b7f0-54b8-45d7-bc20-27be2884a92a
+# ╠═6f23dbc8-82a0-11ef-1ea4-7de9c1060469
+# ╠═9567bbf2-d953-492d-b3f0-489fab9376e7
+# ╠═825f9e29-1b46-4cd1-905b-a7bb6ee6f31c
+# ╠═9d178d57-3c9f-42d2-8be7-bef72e7ecf63
+# ╟─aabd1b26-19b3-4591-bf0c-1585f24ce4cc
+# ╠═cafd9196-b39e-476a-9749-8266a10af465
+# ╠═2b0080dc-6320-4c23-b05b-9f6041eef2bf
+# ╠═6d4855e6-a013-46e3-8a4c-00805fbae0d5
+# ╠═7fd9e68e-9ce9-4854-a30f-ba5a36341aeb
+# ╟─0fbee3ba-de76-4213-b41e-cf8abcdcd62b
+# ╟─9d6c57b6-e327-4397-a99f-f71196166848
+# ╟─5a3b798d-e364-4804-9b72-27db24d60bbe
+# ╟─af000366-be8b-4e93-93bb-5b2e11f2f87e
+# ╟─bf0857f1-7a76-433c-9079-45526d4b49e3
+# ╠═999df9ee-2e33-4552-99b2-dd91db92ec28
+# ╠═b187af11-97e5-4e14-a7b3-9227f18b67ea
+# ╟─58a86246-3109-4190-a62a-e4fc3c955b21
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
