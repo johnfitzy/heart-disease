@@ -5,14 +5,25 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
-
-# ╔═╡ 956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-include("src/plotting_functions.jl")
-
-# ╔═╡ 366b8da3-eb10-4a43-abf6-ad1beb5d74b6
+# load dependencies and helper functions
 begin
-	
+	using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
+
+	include("src/plotting_functions.jl")
+end
+
+# ╔═╡ 00c5e24d-19a7-4c52-ac2a-829390ca95de
+md"""
+# EDA - DS2 (Part B)
+## Purpose: 
+- Brief comparison between `data/DS1/heart.dat` distributions and files in `DS2`
+- From `EDA - DS2 Part A` recall there are many missing values, it is assumed you have looked as playbook `eda_ds2-a.jl` before this one. 
+- This is not an exhaustive comparrison between each feature and each dataset, therefore we have just picked **three features from each dataset**
+- The file `processed.cleveland.data` appears to be super set of `heart.dat`>
+"""
+
+# ╔═╡ 2839ea3a-0a95-42fb-99c8-c86a80ac71b8
+begin
 	# Define the column names
 	column_names = [
     	"age", 
@@ -31,32 +42,53 @@ begin
     	"heart_disease"
 	]
 
-	# Open file as CSV
-	df = CSV.read("data/DS2/processed.cleveland.data", 
+
+	# Open files
+
+	df_ds1 = CSV.read("data/DS1/heart.dat", 
 		header=column_names, DataFrame) 
+	
+	df_clev = CSV.read("data/DS2/processed.cleveland.data", 
+		header=column_names, DataFrame) 
+
+	df_hung = CSV.read("data/DS2/processed.hungarian.data", 
+		header=column_names, DataFrame) 
+
+	df_swiss = CSV.read("data/DS2/processed.switzerland.data", 
+		header=column_names, DataFrame)
 
 end
 
-# ╔═╡ ed55cc30-d877-4289-bfaa-6200b2287f2b
-size(df)
-
 # ╔═╡ 525a0646-d2c5-4a1e-be73-ac4f8032171a
 md"""
-## Feature Analysis: Sex
+# DS1 vs Clevland(DS2)
+## Feature Analysis - Sex
 """
 
 # ╔═╡ dccf5d92-d1a1-4f50-a27f-84b393f95323
-describe(df.age)
+describe(df_clev.sex)
 
 # ╔═╡ 24803bbf-7d98-4741-a99d-810812a25334
 begin
-	create_binary_bar_plot(
-		data=df.sex, 
-		title_text="Sex Distribution (Percentage)",
-		xlabel_text="Sex",
-		ylabel_text="Count",
-		labels=["Male", "Female"]		
+	# Create the two plots
+	p1 = create_binary_bar_plot(
+    	data=df_ds1.sex, 
+    	title_text="Sex Distribution (DS1)",
+    	xlabel_text="Sex",
+    	ylabel_text="Count",
+    	labels=["Male", "Female"]
 	)
+
+	p2 = create_binary_bar_plot(
+    	data=df_clev.sex, 
+    	title_text="Sex Distribution (Cleveland)",
+    	xlabel_text="Sex",
+    	ylabel_text="Count",
+    	labels=["Male", "Female"]
+	)
+
+	# Combine the two plots in a single figure with a 1x2 layout
+	plot(p1, p2, layout = @layout([a b]))
 end
 
 # ╔═╡ d81d784b-d417-4193-a2a2-6c72db0867e0
@@ -64,19 +96,28 @@ md"""
 ## Feature Analysis: Age
 """
 
-# ╔═╡ ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
-describe(df.age)
-
 # ╔═╡ 7a319498-f455-4bad-b701-9c7842f2409e
 begin
-	create_hist_density_plot(df.age, 
-    	"Age Distribution", 
-        "Density Plot of Age", 
-        "Age", 
+	
+	pl = create_hist_plot(df_ds1.serum_chol, 
+    	"Serum Cholesterol Distribution", 
+        "Density Plot of Serum Cholesterol", 
+        "cholesterol", 
     	"Frequency", 
-        "Age", 
+        "Serum Cholesterol", 
         "Density"
 	)
+
+	pl2 = create_hist_plot(df_clev.serum_chol, 
+    	"Serum Cholesterol Distribution", 
+        "Density Plot of Serum Cholesterol", 
+        "cholesterol", 
+    	"Frequency", 
+        "Serum Cholesterol", 
+        "Density"
+	)
+
+	plot(pl, pl2, layout = @layout([a b]))
 end
 
 # ╔═╡ f61d891e-6f86-4019-8c64-a821416010c3
@@ -1869,15 +1910,13 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
+# ╟─00c5e24d-19a7-4c52-ac2a-829390ca95de
 # ╠═8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
-# ╠═956ad0e6-252f-467f-94c9-6a78ecaf4b4f
-# ╠═366b8da3-eb10-4a43-abf6-ad1beb5d74b6
-# ╠═ed55cc30-d877-4289-bfaa-6200b2287f2b
+# ╠═2839ea3a-0a95-42fb-99c8-c86a80ac71b8
 # ╠═525a0646-d2c5-4a1e-be73-ac4f8032171a
 # ╠═dccf5d92-d1a1-4f50-a27f-84b393f95323
 # ╠═24803bbf-7d98-4741-a99d-810812a25334
 # ╠═d81d784b-d417-4193-a2a2-6c72db0867e0
-# ╠═ccfbecc9-f2a3-41d4-8975-aaaf6975afa7
 # ╠═7a319498-f455-4bad-b701-9c7842f2409e
 # ╠═f61d891e-6f86-4019-8c64-a821416010c3
 # ╠═401d0182-3c6a-4597-b618-4ddc94ec8ac1

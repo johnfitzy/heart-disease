@@ -4,27 +4,28 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 9567bbf2-d953-492d-b3f0-489fab9376e7
+# ╔═╡ 8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
 # load dependencies and helper functions
 begin
-	using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions
+	using DataFrames, CSV, Statistics, Plots, StatsPlots, StatsBase,Distributions, 	HypothesisTests
+
 
 	include("src/plotting_functions.jl")
 	include("src/data_clean.jl")
 end
 
-# ╔═╡ 6f23dbc8-82a0-11ef-1ea4-7de9c1060469
+# ╔═╡ 00c5e24d-19a7-4c52-ac2a-829390ca95de
 md"""
-# EDA - DS2 (Part A)
+# EDA - DS2 (Part B)
 ## Purpose: 
-- Initial look at the data in three other files
-- See the state of missing values in the datasets
+- Brief comparison between `data/DS1/heart.dat` distributions and files in `DS2`
+- From `EDA - DS2 Part A` recall there are many missing values, it is assumed you have looked as playbook `eda_ds2-a.jl` before this one. Only features with minimal mising values will be considered here - ie less that 1% missing
+- This is not an exhaustive comparrison between each feature and each dataset, therefore we have just picked **three features from each dataset**
+- The file `processed.cleveland.data` appears to be super set of `heart.dat`>
 """
 
-# ╔═╡ 825f9e29-1b46-4cd1-905b-a7bb6ee6f31c
-# Load in files
+# ╔═╡ 2839ea3a-0a95-42fb-99c8-c86a80ac71b8
 begin
-	
 	# Define the column names
 	column_names = [
     	"age", 
@@ -45,14 +46,23 @@ begin
 
 
 	# Open files
+	df_ds1 = CSV.read("data/DS1/heart.dat", 
+		header=column_names, 
+		DataFrame) 
+	
 	df_clev = CSV.read("data/DS2/processed.cleveland.data", 
-		header=column_names, DataFrame) 
+		header=column_names,
+		DataFrame) 
 
 	df_hung = CSV.read("data/DS2/processed.hungarian.data", 
-		header=column_names, DataFrame) 
+		header=column_names, 
+		DataFrame) 
+
+	# long-beach-va.data
 
 	df_swiss = CSV.read("data/DS2/processed.switzerland.data", 
-		header=column_names, DataFrame) 
+		header=column_names, 
+		DataFrame)
 
 	df_lng_beach = CSV.read("data/DS2/processed.va.data", 
 		header=column_names,
@@ -60,185 +70,290 @@ begin
 
 end
 
-# ╔═╡ 9d178d57-3c9f-42d2-8be7-bef72e7ecf63
-begin
-	function missing_datapoints_percent(df::DataFrame)
-		col_size = size(df)[1]
-		return [(count(x -> ismissing(x) || x == "?", 
-			df[!, col]) / col_size) * 100 for col in names(df)]
-	end
-end
-
-# ╔═╡ aabd1b26-19b3-4591-bf0c-1585f24ce4cc
+# ╔═╡ 525a0646-d2c5-4a1e-be73-ac4f8032171a
 md"""
-## Quick look at the data
+# DS1 vs Clevland(DS2)
+## Feature Analysis - Sex
 """
 
-# ╔═╡ cafd9196-b39e-476a-9749-8266a10af465
-df_clev
+# ╔═╡ dccf5d92-d1a1-4f50-a27f-84b393f95323
+describe(df_clev.sex)
 
-# ╔═╡ 2b0080dc-6320-4c23-b05b-9f6041eef2bf
-df_hung
+# ╔═╡ 24803bbf-7d98-4741-a99d-810812a25334
+begin
+	# Create the two plots
 
-# ╔═╡ 6d4855e6-a013-46e3-8a4c-00805fbae0d5
-df_swiss
+	plot(
+		create_binary_bar_plot(
+    		data=df_ds1.sex, 
+    		title_text="Sex Distribution (DS1)",
+    		xlabel_text="Sex",
+    		ylabel_text="Count",
+    		labels=["Male", "Female"]
+		),
 
-# ╔═╡ 7fd9e68e-9ce9-4854-a30f-ba5a36341aeb
-df_lng_beach
+		create_binary_bar_plot(
+    		data=df_clev.sex, 
+    		title_text="Sex Distribution (Cleveland)",
+    		xlabel_text="Sex",
+    		ylabel_text="Count",
+    		labels=["Male", "Female"]
+		), layout = @layout([a b]))
+end
 
-# ╔═╡ 0fbee3ba-de76-4213-b41e-cf8abcdcd62b
+# ╔═╡ d81d784b-d417-4193-a2a2-6c72db0867e0
 md"""
-### Comments on quick look
-- All three files have at least one column that has the data points as Strings instead of the types they should be such as Int or Float. 
-- This is easyly fixed by casting valid Strings to the correct types
-- All three files have missing data points either as `missing` type, or as the String "?"
+## Feature Analysis: Age
 """
 
-# ╔═╡ 9d6c57b6-e327-4397-a99f-f71196166848
+# ╔═╡ 7a319498-f455-4bad-b701-9c7842f2409e
+begin
+	plot(
+		create_hist_plot(df_ds1.serum_chol, 
+    	"Serum - DS1", 
+        "Density Plot of Serum Cholesterol", 
+        "cholesterol", 
+    	"Frequency", 
+        "Serum Cholesterol", 
+        "Density"
+	),
+
+	create_hist_plot(df_clev.serum_chol, 
+    	"Serum - Cleveland", 
+        "Density Plot of Serum Cholesterol", 
+        "cholesterol", 
+    	"Frequency", 
+        "Serum Cholesterol", 
+        "Density"
+	),
+		layout = @layout([a b])
+	)
+end
+
+# ╔═╡ 22671832-5d03-4df9-81a3-f0db8fa704ca
+println(UnequalVarianceTTest(df_ds1.serum_chol, df_clev.serum_chol))
+
+# ╔═╡ 26fd39f5-feb6-4d8a-8b02-5425639f459e
 md"""
-### How much data is missing?
+### Comments
+- We can view from the above plots that df_ds1.age` and `df_clev.age` are bassically the same and `df_ds1.serum_chol` and `df_clev.serum_chol` also have essentially the same probability distribution
+- The null hypothesis for `df_ds1.serum_chol` and `df_clev.serum_chol` can't be rejected sugesting there is no statistically significant difference between the datasets. 
+- It is likely that `heart.dat(ds1)` is a subset of `processed.cleveland.data`
 """
 
-# ╔═╡ 5a3b798d-e364-4804-9b72-27db24d60bbe
-begin
-
-	# Get percentage of missing datapoints per feature
-	clev_missing = missing_datapoints_percent(df_clev)
-
-	# Plot the percentage of missing data points per feature
-	bar( 
-		clev_missing, 
-		legend=false, 
-		xlabel="Features", 
-		ylabel="Percentage Missing", 
-		title="Percentage of data missing in Cleveland Dataset", 
-		orientation=:vertical, 
-		xticks=1:size(clev_missing)[1]
-	)
-
-
-end
-
-# ╔═╡ af000366-be8b-4e93-93bb-5b2e11f2f87e
-begin
-
-	# Get percentage of missing datapoints per feature
-	missing_hung = missing_datapoints_percent(df_hung)
-	
-	# Plot the percentage of missing data points per feature
-	bar( 
-		missing_hung, 
-		legend=false, 
-		xlabel="Features", 
-		ylabel="Percentage Missing", 
-		title="Percentage of data missing in Hungarian Dataset", 
-		orientation=:vertical, 
-		xticks=1:size(missing_hung)[1]
-	)
-end
-
-# ╔═╡ bf0857f1-7a76-433c-9079-45526d4b49e3
-begin
-
-	# Get percentage of missing datapoints per feature
-	missing_swiss = missing_datapoints_percent(df_swiss)
-	
-	# Plot the percentage of missing data points per feature
-	bar( 
-		missing_swiss, 
-		legend=false, 
-		xlabel="Features", 
-		ylabel="Percentage Missing", 
-		title="Percentage of data missing in Swiss Dataset", 
-		orientation=:vertical, 
-		xticks=1:size(clev_missing)[1]
-	)
-end
-
-# ╔═╡ 999df9ee-2e33-4552-99b2-dd91db92ec28
-begin
-
-	# Get percentage of missing datapoints per feature
-	missing_lng_beach = missing_datapoints_percent(df_lng_beach)
-	
-	# Plot the percentage of missing data points per feature
-	bar( 
-		missing_lng_beach, 
-		legend=false, 
-		xlabel="Features", 
-		ylabel="Percentage Missing", 
-		title="Percentage of data missing in Long Beach Dataset", 
-		orientation=:vertical, 
-		xticks=1:size(clev_missing)[1]
-	)
-end
-
-# ╔═╡ b187af11-97e5-4e14-a7b3-9227f18b67ea
-println(missing_lng_beach)
-
-# ╔═╡ 58a86246-3109-4190-a62a-e4fc3c955b21
+# ╔═╡ f61d891e-6f86-4019-8c64-a821416010c3
 md"""
-### Comment on missing data
+# DS1 vs Hungarian(DS2)
+## Feature Analysis - Resting Blood Pressure  (rest_bp)
+"""
 
-#### Feature mapping:
+# ╔═╡ a4e1287f-a430-4aaa-b9b0-aa4f77690f79
+begin
 
-| Feature Number | Feature Name           |
-|----------------|------------------------|
-| 1              | age                    |
-| 2              | sex                    |
-| 3              | chest_pain             |
-| 4              | rest_bp                |
-| 5              | serum_chol             |
-| 6              | fasting_blood_sugar    |
-| 7              | electrocardiographic   |
-| 8              | max_heart_rate         |
-| 9              | angina                 |
-| 10             | oldpeak                |
-| 11             | slope                  |
-| 12             | major_vessels          |
-| 13             | thal                   |
-| 14             | heart_disease          |
+	# Convert Strings to Int
+	df_hung.rest_bp = map(x -> clean_value(x, Int), df_hung.rest_bp)
+	
+	# Convert Union{Missing, Int64} to Int (there is no missing)
+	df_hung.rest_bp = coalesce.(df_hung.rest_bp)
 
-##### Cleveland
-- `major_vessels` has only 1.32% missing
-- `thal` has only 0.66% missing
-##### Hungarian
-Lots more missing data here
-- `rest_bp` has 0.34% missing
-- `serum_chol` has 7.82% missing
-- `fasting_blood_sugar` has 2.72% missing
-- `electrocardiographic` has 0.34% missing
-- `max_heart_rate` has 0.34% missing
-- `angina` has 0.34% missing
-- `slope` has 64.63% missing
-- `major_vessels` has 98.98% missing
-- `thal` has 90.48% missing
-#### Swiss 
-Lots more missing data here
-- `rest_bp` has 1.63% missing
-- `fasting_blood_sugar` has 60.98% missing
-- `electrocardiographic` has 0.81% missing
-- `max_heart_rate` has 0.81% missing
-- `angina` has 0.81% missing
-- `oldpeak` has 4.88% missing
-- `slope` has 13.82% missing
-- `major_vessels` has 95.93% missing
-- `thal` has 42.28% missing
+	plot(
+		create_hist_plot(df_ds1.rest_bp, 
+    		"rest_bp - DS1", 
+        	"Histogram of Resting Blood Pressure", 
+	        "rest_bp", 
+	    	"Frequency", 
+        	"Resting Blood Pressure", 
+        	"Density"
+		),
 
-#### Long Beach
-- `rest_bp` has 28.0% missing
-- `serum_chol` has 3.5% missing
-- `fastingbloodsugar` has 3.5% missing
-- `maxheartrate` has 26.5% missing
-- `angina` has 26.5% missing
-- `oldpeak` has 28.0% missing
-- `slope` has 51.0% missing
-- `major_vessels` has 99.0% missing
-- `thal` has 83.0% missing
+		create_hist_plot(collect(skipmissing(df_hung.rest_bp)), 
+    		"rest_bp - Hungary", 
+        	"Density Plot of Resting Blood Pressure", 
+        	"rest_bp", 
+    		"Frequency", 
+        	"Resting Blood Pressure", 
+        	"Density"
+		),
+		layout = @layout([a b])
+	
+	)
+end
 
----
+# ╔═╡ 93845f54-1d15-48bb-b9aa-aa51fc4bdba3
+println(UnequalVarianceTTest(df_ds1.serum_chol, df_clev.serum_chol))
 
-We can see that both the Hungarian and the Swiss processed datasets have many missing values for certian feature. This is will require imputation. Given that there are so many missing values it is uncertian at this points if some of these features will be usable. 
+# ╔═╡ 2a311f86-9404-4989-8214-fbf9ac6ffff1
+md"""
+## Feature Analysis - Max Heart Rate  (max_heart_rate)
+"""
+
+# ╔═╡ 30237426-1e35-4702-9f74-14558eb350b3
+begin
+
+	# Convert Strings to Int
+	df_hung.max_heart_rate = map(x -> clean_value(x, Int), df_hung.max_heart_rate)
+
+	
+	# Drop the 1 missing values and convert to vector of Int
+	filtered_df_hung_max_heart_rate = collect(skipmissing(df_hung.max_heart_rate))
+
+
+	plot(
+		create_hist_plot(df_ds1.max_heart_rate, 
+    		"max_heart_rate - DS1", 
+        	"Histogram of Max Resting Heart Rate", 
+	        "max_heart_rate", 
+	    	"Frequency", 
+        	"Max Resting Heart Rate", 
+        	"Density"
+		),
+
+		create_hist_plot(filtered_df_hung_max_heart_rate, 
+    		"max_heart_rate - Hungary", 
+        	"Histogram of Max Resting Heart Rate", 
+        	"max_heart_rate", 
+    		"Frequency", 
+        	"Max Resting Heart Rate", 
+        	"Density"
+		),
+		layout = @layout([a b])
+	
+	)
+
+end
+
+# ╔═╡ ceaf6dd9-1b81-4da0-b593-9dd2bb8faba6
+println(UnequalVarianceTTest(df_ds1.max_heart_rate, filtered_df_hung_max_heart_rate))
+
+# ╔═╡ 1b5ac701-1559-4f3a-b141-859b18bf5739
+md"""
+### Comments
+- Resting Blood Pressure (rest_bp) shows **no significant** statistical difference between `df_ds1.rest_bp` and `df_clev.rest_bp`.
+- For `df_ds1.max_heart_rate` and `hung.max_heart_rate`, the null hypothesis **is rejected**, indicating a statistically significant difference between the datasets.
+"""
+
+# ╔═╡ 50795050-2a28-4303-9aa0-1120d78415cc
+md"""
+# DS1 vs Switzerland(DS2)
+## Feature Analysis - ST depression induced by exercise relative to rest(oldpeak)
+"""
+
+# ╔═╡ e1cbd982-b813-462a-929d-054c905adb2b
+begin
+
+		# Convert Strings to Int
+	df_swiss.oldpeak = map(x -> clean_value(x, Int), df_swiss.oldpeak)
+
+	
+	# Drop the 1 missing values and convert to vector of Int
+	filtered_df_swiss_oldpeak = collect(skipmissing(df_swiss.oldpeak))
+
+	
+	plot(
+		create_hist_plot(df_ds1.oldpeak, 
+    		"oldpeak - DS1", 
+        	"Histogram of ST depression (oldpeak)", 
+	        "oldpeak", 
+	    	"Frequency", 
+        	"ST depression (oldpeak)", 
+        	"Density"
+		),
+
+		create_hist_plot(filtered_df_swiss_oldpeak, 
+    		"oldpeak - Switzerland", 
+        	"Histogram of ST depression (oldpeak)", 
+        	"oldpeak", 
+    		"Frequency", 
+        	"ST depression (oldpeak)", 
+        	"Density"
+		),
+		layout = @layout([a b])
+	)
+end
+
+# ╔═╡ 61aac936-0e68-46e4-bb85-0ccfe5075787
+println(UnequalVarianceTTest(df_ds1.oldpeak, filtered_df_swiss_oldpeak))
+
+# ╔═╡ 655d5e2d-9b0f-4abf-8a7a-2b19716dbb40
+begin
+	# Convert from String to Int or missing
+	df_swiss.angina = map(x -> clean_value(x, Int), df_swiss.angina)
+	
+	plot(
+
+		create_binary_bar_plot(
+			data = df_ds1.angina, 
+    		title_text = "Angina - DS1",
+    		xlabel_text = "Angina with Exercise",  # X-axis label
+    		ylabel_text = "Percentage (%)",        # Y-axis label
+    		labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
+		),
+
+
+		create_binary_bar_plot(
+			data = collect(skipmissing(df_swiss.angina)), # remove missing and to array
+    		title_text = "Angina - Swiss",
+    		xlabel_text = "Angina with Exercise",  # X-axis label
+	    	ylabel_text = "Percentage (%)",        # Y-axis label
+    		labels = ["Yes", "No"]  # Labels for the categories 1 (Yes) and 0 (No)
+		),
+			layout = @layout([a b])
+		)
+end
+
+# ╔═╡ 3e2121c9-3c72-4c91-ae97-84de34618df8
+println(UnequalVarianceTTest(df_ds1.angina, collect(skipmissing(df_swiss.angina))))
+
+# ╔═╡ 13b5f478-dc0c-43d8-af9b-db2c61328c1e
+md"""
+### Comments
+- Oldpeak **is** significantly statistically different between `df_ds1.oldpeak` and `hung.oldpeak` (p < 1e-04)
+- Angina **is** significantly statistically different between `df_ds1.angina` and `hung.angina` (p = 0.0357)
+"""
+
+# ╔═╡ fb731209-3b3c-4261-8e4c-7ccdc73bc89d
+md"""
+# DS1 vs Long Beach(DS2)
+## Feature Analysis - Resting electrocardiographic results (electrocardiographic)
+"""
+
+# ╔═╡ 933e5c6c-3d7c-4b79-9403-fd5cf440b1c8
+begin	
+	plot(
+		create_bar_plot(
+    		data=df_ds1.electrocardiographic, 
+    		labels=["Normal", "ST-T Abnormality", "LVH"], 
+    		values_to_extract=[0, 1, 2], 
+    		plot_title="ECG Distribution", 
+    		xlabel_text="Electrocardiographic Type", 
+    		ylabel_text="Count"
+	), 
+		create_bar_plot(
+    		data=df_lng_beach.electrocardiographic, 
+    		labels=["Normal", "ST-T Abnormality", "LVH"], 
+    		values_to_extract=[0, 1, 2], 
+    		plot_title="ECG Distribution", 
+    		xlabel_text="Electrocardiographic Type", 
+    		ylabel_text="Count"
+	),
+		layout = @layout([a b])
+	)
+end
+
+# ╔═╡ a5df8a8e-3766-4b4a-a3ca-4eb7d9edb206
+println(UnequalVarianceTTest(df_ds1.electrocardiographic,df_lng_beach.electrocardiographic))
+
+# ╔═╡ 04ff5df8-7cc7-4146-bb42-f211dddf2b81
+md"""
+### Comments
+- The feature `electrocardiographic` shows a statistically significant difference between `df_ds1.electrocardiographic` and `df_lng_beach.electrocardiographic`, as the null hypothesis **is rejected**.
+"""
+
+
+# ╔═╡ f56b866c-dbbd-42e9-81b5-b9997abf61bb
+md"""
+## Conclusion
+- We can see from this limited compariason between features from DS2 datasets and the DS1 dataset that some features share similar distributions and while others have statistically significant difference between locations. 
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -247,6 +362,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
@@ -256,6 +372,7 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 DataFrames = "~1.7.0"
 Distributions = "~0.25.112"
+HypothesisTests = "~0.11.2"
 Plots = "~1.40.8"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
@@ -267,7 +384,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "7bb234206d6699763fe2f37dd65ff37e08e5106e"
+project_hash = "e9e6aac2b35a91e43bfb11c76948faa95d75e06b"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -279,6 +396,31 @@ weakdeps = ["ChainRulesCore", "Test"]
     [deps.AbstractFFTs.extensions]
     AbstractFFTsChainRulesCoreExt = "ChainRulesCore"
     AbstractFFTsTestExt = "Test"
+
+[[deps.Accessors]]
+deps = ["CompositionsBase", "ConstructionBase", "InverseFunctions", "LinearAlgebra", "MacroTools", "Markdown"]
+git-tree-sha1 = "b392ede862e506d451fc1616e79aa6f4c673dab8"
+uuid = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
+version = "0.1.38"
+
+    [deps.Accessors.extensions]
+    AccessorsAxisKeysExt = "AxisKeys"
+    AccessorsDatesExt = "Dates"
+    AccessorsIntervalSetsExt = "IntervalSets"
+    AccessorsStaticArraysExt = "StaticArrays"
+    AccessorsStructArraysExt = "StructArrays"
+    AccessorsTestExt = "Test"
+    AccessorsUnitfulExt = "Unitful"
+
+    [deps.Accessors.weakdeps]
+    AxisKeys = "94b1ba4f-4ee9-5380-92f1-94cde586c3c5"
+    Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+    IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+    Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+    StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+    Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+    Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -397,6 +539,16 @@ git-tree-sha1 = "362a287c3aa50601b0bc359053d5c2468f0e7ce0"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.11"
 
+[[deps.Combinatorics]]
+git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
+uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+version = "1.0.2"
+
+[[deps.CommonSolve]]
+git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
+uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+version = "0.2.4"
+
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
 git-tree-sha1 = "8ae8d32e09f0dcf42a36b90d4e17f5dd2e4c4215"
@@ -412,11 +564,35 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
 
+[[deps.CompositionsBase]]
+git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
+uuid = "a33af91c-f02d-484b-be07-31d278c5ca2b"
+version = "0.1.2"
+weakdeps = ["InverseFunctions"]
+
+    [deps.CompositionsBase.extensions]
+    CompositionsBaseInverseFunctionsExt = "InverseFunctions"
+
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
 git-tree-sha1 = "ea32b83ca4fefa1768dc84e504cc0a94fb1ab8d1"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
 version = "2.4.2"
+
+[[deps.ConstructionBase]]
+git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
+uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
+version = "1.5.8"
+
+    [deps.ConstructionBase.extensions]
+    ConstructionBaseIntervalSetsExt = "IntervalSets"
+    ConstructionBaseLinearAlgebraExt = "LinearAlgebra"
+    ConstructionBaseStaticArraysExt = "StaticArrays"
+
+    [deps.ConstructionBase.weakdeps]
+    IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+    LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.Contour]]
 git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
@@ -668,6 +844,12 @@ git-tree-sha1 = "7c4195be1649ae622304031ed46a2f4df989f1eb"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.24"
 
+[[deps.HypothesisTests]]
+deps = ["Combinatorics", "Distributions", "LinearAlgebra", "Printf", "Random", "Rmath", "Roots", "Statistics", "StatsAPI", "StatsBase"]
+git-tree-sha1 = "35235811ebde579eb0d4eb9f89cc8fc3c31d103d"
+uuid = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
+version = "0.11.2"
+
 [[deps.InlineStrings]]
 git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
 uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
@@ -700,6 +882,16 @@ weakdeps = ["Unitful"]
 
     [deps.Interpolations.extensions]
     InterpolationsUnitfulExt = "Unitful"
+
+[[deps.InverseFunctions]]
+git-tree-sha1 = "a779299d77cd080bf77b97535acecd73e1c5e5cb"
+uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
+version = "0.1.17"
+weakdeps = ["Dates", "Test"]
+
+    [deps.InverseFunctions.extensions]
+    InverseFunctionsDatesExt = "Dates"
+    InverseFunctionsTestExt = "Test"
 
 [[deps.InvertedIndices]]
 git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
@@ -1224,6 +1416,26 @@ git-tree-sha1 = "58cdd8fb2201a6267e1db87ff148dd6c1dbd8ad8"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.5.1+0"
 
+[[deps.Roots]]
+deps = ["Accessors", "CommonSolve", "Printf"]
+git-tree-sha1 = "3a7c7e5c3f015415637f5debdf8a674aa2c979c4"
+uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+version = "2.2.1"
+
+    [deps.Roots.extensions]
+    RootsChainRulesCoreExt = "ChainRulesCore"
+    RootsForwardDiffExt = "ForwardDiff"
+    RootsIntervalRootFindingExt = "IntervalRootFinding"
+    RootsSymPyExt = "SymPy"
+    RootsSymPyPythonCallExt = "SymPyPythonCall"
+
+    [deps.Roots.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    IntervalRootFinding = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+    SymPy = "24249f21-da20-56a4-8eb1-6a02cf4ae2e6"
+    SymPyPythonCall = "bc8888f7-b21e-4b7c-a06a-5d9c9496438c"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
@@ -1320,14 +1532,11 @@ deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Re
 git-tree-sha1 = "b423576adc27097764a90e163157bcfc9acf0f46"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 version = "1.3.2"
+weakdeps = ["ChainRulesCore", "InverseFunctions"]
 
     [deps.StatsFuns.extensions]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
-
-    [deps.StatsFuns.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.StatsPlots]]
 deps = ["AbstractFFTs", "Clustering", "DataStructures", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "NaNMath", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
@@ -1416,14 +1625,11 @@ deps = ["Dates", "LinearAlgebra", "Random"]
 git-tree-sha1 = "d95fe458f26209c66a187b1114df96fd70839efd"
 uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
 version = "1.21.0"
+weakdeps = ["ConstructionBase", "InverseFunctions"]
 
     [deps.Unitful.extensions]
     ConstructionBaseUnitfulExt = "ConstructionBase"
     InverseFunctionsUnitfulExt = "InverseFunctions"
-
-    [deps.Unitful.weakdeps]
-    ConstructionBase = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
-    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.UnitfulLatexify]]
 deps = ["LaTeXStrings", "Latexify", "Unitful"]
@@ -1763,22 +1969,33 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═6f23dbc8-82a0-11ef-1ea4-7de9c1060469
-# ╠═9567bbf2-d953-492d-b3f0-489fab9376e7
-# ╠═825f9e29-1b46-4cd1-905b-a7bb6ee6f31c
-# ╠═9d178d57-3c9f-42d2-8be7-bef72e7ecf63
-# ╟─aabd1b26-19b3-4591-bf0c-1585f24ce4cc
-# ╠═cafd9196-b39e-476a-9749-8266a10af465
-# ╠═2b0080dc-6320-4c23-b05b-9f6041eef2bf
-# ╠═6d4855e6-a013-46e3-8a4c-00805fbae0d5
-# ╠═7fd9e68e-9ce9-4854-a30f-ba5a36341aeb
-# ╟─0fbee3ba-de76-4213-b41e-cf8abcdcd62b
-# ╟─9d6c57b6-e327-4397-a99f-f71196166848
-# ╟─5a3b798d-e364-4804-9b72-27db24d60bbe
-# ╟─af000366-be8b-4e93-93bb-5b2e11f2f87e
-# ╟─bf0857f1-7a76-433c-9079-45526d4b49e3
-# ╠═999df9ee-2e33-4552-99b2-dd91db92ec28
-# ╠═b187af11-97e5-4e14-a7b3-9227f18b67ea
-# ╟─58a86246-3109-4190-a62a-e4fc3c955b21
+# ╟─00c5e24d-19a7-4c52-ac2a-829390ca95de
+# ╠═8520ae4a-7fc0-11ef-0890-2dfb0d7ebdfe
+# ╠═2839ea3a-0a95-42fb-99c8-c86a80ac71b8
+# ╠═525a0646-d2c5-4a1e-be73-ac4f8032171a
+# ╠═dccf5d92-d1a1-4f50-a27f-84b393f95323
+# ╟─24803bbf-7d98-4741-a99d-810812a25334
+# ╟─d81d784b-d417-4193-a2a2-6c72db0867e0
+# ╟─7a319498-f455-4bad-b701-9c7842f2409e
+# ╠═22671832-5d03-4df9-81a3-f0db8fa704ca
+# ╟─26fd39f5-feb6-4d8a-8b02-5425639f459e
+# ╟─f61d891e-6f86-4019-8c64-a821416010c3
+# ╟─a4e1287f-a430-4aaa-b9b0-aa4f77690f79
+# ╠═93845f54-1d15-48bb-b9aa-aa51fc4bdba3
+# ╟─2a311f86-9404-4989-8214-fbf9ac6ffff1
+# ╟─30237426-1e35-4702-9f74-14558eb350b3
+# ╟─ceaf6dd9-1b81-4da0-b593-9dd2bb8faba6
+# ╟─1b5ac701-1559-4f3a-b141-859b18bf5739
+# ╟─50795050-2a28-4303-9aa0-1120d78415cc
+# ╟─e1cbd982-b813-462a-929d-054c905adb2b
+# ╠═61aac936-0e68-46e4-bb85-0ccfe5075787
+# ╟─655d5e2d-9b0f-4abf-8a7a-2b19716dbb40
+# ╠═3e2121c9-3c72-4c91-ae97-84de34618df8
+# ╟─13b5f478-dc0c-43d8-af9b-db2c61328c1e
+# ╠═fb731209-3b3c-4261-8e4c-7ccdc73bc89d
+# ╠═933e5c6c-3d7c-4b79-9403-fd5cf440b1c8
+# ╠═a5df8a8e-3766-4b4a-a3ca-4eb7d9edb206
+# ╟─04ff5df8-7cc7-4146-bb42-f211dddf2b81
+# ╟─f56b866c-dbbd-42e9-81b5-b9997abf61bb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

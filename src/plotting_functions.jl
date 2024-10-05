@@ -35,7 +35,26 @@ function create_combined_plot(
     yaxis!(y_label)
 end
 
-
+function create_hist_plot(
+    data::Vector{<:Number}, 
+    hist_title::String, 
+    density_title::String, 
+    hist_xlabel::String, 
+    hist_ylabel::String, 
+    density_xlabel::String, 
+    density_ylabel::String, 
+    bins::Int = 10
+)
+    # Add a histogram to the first subplot
+    histogram(
+        data, 
+        title=hist_title, 
+        xlabel=hist_xlabel, 
+        ylabel=hist_ylabel, 
+        bins=bins, 
+        legend=false
+    )
+end
 
 # Define the reusable function for creating a combined histogram and density plot
 function create_hist_density_plot(
