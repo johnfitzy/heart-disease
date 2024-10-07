@@ -542,10 +542,6 @@ begin
 	X = transpose(Matrix(df[:, 1:13]))
 	
 	X1 = standardize(ZScoreTransform, X, dims=2)
-
-	# # Split into training and test sets with labels
-	# (X1_train, labels_train), (X1_test, labels_test) = splitobs((X1, labels); at=0.7, shuffle=true)
-
 end
 
 # ╔═╡ 601d2031-8b6f-481a-8e2a-e5a3af97878a
@@ -556,8 +552,8 @@ begin
 	# Predict to get outputs from X1_test
 	Y = predict(M, X1)
 	
-	no_disease = Y[:, labels .== 0]
-	has_disease = Y[:, labels .== 1]
+	no_disease = Y[:, labels .== 1]
+	has_disease = Y[:, labels .== 2]
 
 	# Plot points from reduced dims with no disease
 	scatter(no_disease[1, :], 
