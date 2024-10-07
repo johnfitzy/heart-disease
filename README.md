@@ -39,3 +39,9 @@ processed.location.data: The 14 attributes matching DS1 with fewer missing value
 - Extend EDA to DS2: Handle missing data, compare across locations, and investigate the larger dataset.
 - Generate insights: Summarize your findings in terms of the distributions, correlations, and any clusters or location-based differences. Use your visualizations and statistical tests to guide the report.
 - This approach will help break down the task systematically while ensuring you address both datasets comprehensively.
+
+
+TODO:
+
+- change data clean up to 	Impute.declaremissings(df; values=(NaN, -9999, "?"))
+

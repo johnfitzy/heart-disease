@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ ae7a893c-81cb-11ef-1574-6b46c8d285f7
-using MLJModels, MLJ, DataFrames, CSV
+using MLJModels, MLJ, DataFrames, CSV, Impute
 
 # ╔═╡ f869d073-f48a-4e8a-9949-b274b1ac1c07
 include("../src/data_clean.jl")
@@ -21,12 +21,26 @@ begin
 
 end
 
+# ╔═╡ 658053cc-13a8-4d2d-a458-3d8c20375897
+begin
+using Impute: knn
+
+	Impute.knn(Matrix(df), dims=:cols)
+
+end
+
 # ╔═╡ 74ef1fee-0018-4dec-b3f8-081caadddede
 begin
-	df.a = map(x -> clean_value(x, Int), df.a)
-	df.b = map(x -> clean_value(x, Int), df.b)
-	df.c = map(x -> clean_value(x, Float64), df.c)
+	# df.a = map(x -> clean_value(x, Int), df.a)
+	# df.b = map(x -> clean_value(x, Int), df.b)
+	# df.c = map(x -> clean_value(x, Float64), df.c)
+
+
+	Impute.declaremissings(df; values=(NaN, -9999, "?"))
 end
+
+# ╔═╡ b7950a69-ce4f-430b-8724-158ae7d9e5dd
+println(df[:,1])
 
 # ╔═╡ 55a3a010-aeb1-4b14-9f27-dce60b7c89fe
 df
@@ -75,17 +89,22 @@ println(df_swiss.rest_bp)
 # ╔═╡ d24618f0-898a-4b87-9cfc-14e998cbea56
 print_column_types(df_swiss)
 
+# ╔═╡ 72fb1220-4074-47ac-b23e-b1de12e83536
+df
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Impute = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJModels = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
 
 [compat]
 CSV = "~0.10.14"
 DataFrames = "~1.6.1"
+Impute = "~0.6.12"
 MLJ = "~0.20.7"
 MLJModels = "~0.17.4"
 """
@@ -96,7 +115,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "4ee6c0d49ad32d804a4f379d79fa2a82e622fbca"
+project_hash = "3ec9f982721327f42675854b412e0ffdbd9b96bc"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -162,6 +181,11 @@ deps = ["UnsafeAtomics"]
 git-tree-sha1 = "c06a868224ecba914baa6942988e2f2aade419be"
 uuid = "a9b6321e-bd34-4604-b9c9-b65b8de01458"
 version = "0.1.0"
+
+[[deps.BSON]]
+git-tree-sha1 = "4c3e506685c527ac6a54ccc0c8c76fd6f91b42fb"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.9"
 
 [[deps.BangBang]]
 deps = ["Accessors", "ConstructionBase", "InitialValues", "LinearAlgebra", "Requires"]
@@ -332,6 +356,12 @@ git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
+[[deps.DataDeps]]
+deps = ["HTTP", "Libdl", "Reexport", "SHA", "Scratch", "p7zip_jll"]
+git-tree-sha1 = "8ae085b71c462c2cb1cfedcb10c3c877ec6cf03f"
+uuid = "124859b0-ceae-595e-8997-d05f6a7a8dfe"
+version = "0.7.13"
+
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
 git-tree-sha1 = "04c738083f29f86e62c8afc341f0967d8717bdb8"
@@ -490,6 +520,12 @@ git-tree-sha1 = "7c4195be1649ae622304031ed46a2f4df989f1eb"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.24"
 
+[[deps.Impute]]
+deps = ["BSON", "CSV", "DataDeps", "Distances", "IterTools", "LinearAlgebra", "Missings", "NamedDims", "NearestNeighbors", "Random", "Statistics", "StatsBase", "TableOperations", "Tables"]
+git-tree-sha1 = "ec5ca28d28bf8c807f1f8f9db885037ae660c89d"
+uuid = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
+version = "0.6.12"
+
 [[deps.InitialValues]]
 git-tree-sha1 = "4da0f88e9a39111c2fa3add390ab15f3a44f3ca3"
 uuid = "22cec73e-a1b8-11e9-2c92-598750a2cf9c"
@@ -531,6 +567,11 @@ version = "1.3.0"
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
 version = "0.2.2"
+
+[[deps.IterTools]]
+git-tree-sha1 = "42d5f897009e7ff2cf88db414a389e5ed1bdd023"
+uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
+version = "1.10.0"
 
 [[deps.IterationControl]]
 deps = ["EarlyStopping", "InteractiveUtils"]
@@ -814,6 +855,31 @@ deps = ["PrettyPrint"]
 git-tree-sha1 = "1a0fa0e9613f46c9b8c11eee38ebb4f590013c5e"
 uuid = "71a1bf82-56d0-4bbc-8a3c-48b961074391"
 version = "0.1.5"
+
+[[deps.NamedDims]]
+deps = ["LinearAlgebra", "Pkg", "Statistics"]
+git-tree-sha1 = "90178dc801073728b8b2d0d8677d10909feb94d8"
+uuid = "356022a1-0364-5f58-8944-0da4b18d706f"
+version = "1.2.2"
+
+    [deps.NamedDims.extensions]
+    AbstractFFTsExt = "AbstractFFTs"
+    ChainRulesCoreExt = "ChainRulesCore"
+    CovarianceEstimationExt = "CovarianceEstimation"
+    TrackerExt = "Tracker"
+
+    [deps.NamedDims.weakdeps]
+    AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    CovarianceEstimation = "587fd27a-f159-11e8-2dae-1979310e6154"
+    Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+    Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
+
+[[deps.NearestNeighbors]]
+deps = ["Distances", "StaticArrays"]
+git-tree-sha1 = "3cebfc94a0754cc329ebc3bab1e6c89621e791ad"
+uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+version = "0.4.20"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -1163,6 +1229,12 @@ deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
 
+[[deps.TableOperations]]
+deps = ["SentinelArrays", "Tables", "Test"]
+git-tree-sha1 = "e383c87cf2a1dc41fa30c093b2a19877c83e1bc1"
+uuid = "ab02a1b2-a7df-11e8-156e-fb1833f50b87"
+version = "1.2.0"
+
 [[deps.TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
 git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
@@ -1274,6 +1346,7 @@ version = "17.4.0+2"
 # ╠═f869d073-f48a-4e8a-9949-b274b1ac1c07
 # ╠═5d9265b4-503f-4783-8c03-cb13b666f1ff
 # ╠═74ef1fee-0018-4dec-b3f8-081caadddede
+# ╠═b7950a69-ce4f-430b-8724-158ae7d9e5dd
 # ╠═55a3a010-aeb1-4b14-9f27-dce60b7c89fe
 # ╠═d195adfb-37b9-4389-b746-421ac51b8dc8
 # ╠═d5edd920-2756-4638-a8c6-b6fb7f9d097a
@@ -1281,5 +1354,7 @@ version = "17.4.0+2"
 # ╠═72bbedb7-6328-4161-b495-9a8ca3b428c6
 # ╠═85047f3e-6dda-45d3-bdb9-c8b82f307b11
 # ╠═d24618f0-898a-4b87-9cfc-14e998cbea56
+# ╠═72fb1220-4074-47ac-b23e-b1de12e83536
+# ╠═658053cc-13a8-4d2d-a458-3d8c20375897
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
