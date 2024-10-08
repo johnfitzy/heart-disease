@@ -99,10 +99,8 @@ function clean_and_flatten!(df)
 
     # Clean and flatten each column based on its type
     for col_name in names(df)
-        if col_name in ["sex", "fasting_blood_sugar", "angina", "slope", "heart_disease"]
+        if col_name in ["sex", "fasting_blood_sugar", "angina", "slope", "heart_disease", "age", "chest_pain", "electrocardiographic", "thal"]
             clean_and_flatten_column!(df, col_name, Int64)  # Binary and Integer types
-        elseif col_name in ["chest_pain", "electrocardiographic", "thal"]
-            clean_and_flatten_column!(df, col_name, Int64)  # Categorical types as integers
         else
             clean_and_flatten_column!(df, col_name, Float64)  # All other continuous variables as floats
         end
