@@ -40,12 +40,10 @@ end
 # ╔═╡ 2623efd6-f1fc-48a8-b5d0-dad6436aebe0
 # Prepare X and y data
 begin	
-	
-	# X features coerce to scitype Continuous as that's what the model wants
-	X = coerce(select(df, 1:13), Count => Continuous)
 
+	# X features coerce to scitype Continuous as that's what the model wants
 	# y targes coerce to scitype OrderdFactor as that's what the model wants
-	y = coerce(df[:, 14], OrderedFactor)
+	X, y = coerce_features_and_target_to_scitypes(df)
 end
 
 # ╔═╡ 319d966e-d2cd-42e8-bcc2-fe9d379ab054

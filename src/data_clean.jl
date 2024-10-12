@@ -141,3 +141,61 @@ function print_column_types(df::DataFrame)
     end
 end
 
+"""
+    missing_datapoints_percent(df::DataFrame) -> Vector{Float64}
+
+Calculates the percentage of missing data points for each column in the given DataFrame `df`. 
+
+A data point is considered "missing" if it is either `missing` or the string `"?"`. The function returns a vector containing the percentage of missing data points for each column in the DataFrame, where the percentages are based on the total number of rows in each column.
+
+# Arguments
+- `df::DataFrame`: The input DataFrame where each column is analyzed for missing data.
+
+# Returns
+- A vector of `Float64` values, where each value represents the percentage of missing data points in the corresponding column of the DataFrame.
+
+# Example
+```julia
+using DataFrames
+
+df = DataFrame(A = [1, 2, missing], B = ["?", "value", "value"])
+missing_datapoints_percent(df)
+# Output: [33.33, 33.33]
+"""
+
+function missing_datapoints_percent(df::DataFrame)
+	col_size = size(df)[1]
+	return [(count(x -> ismissing(x) || x == "?", df[!, col]) / col_size) * 100 for col in names(df)]
+end
+
+
+
+"""
+    coerce_features_and_target_to_scitypes(df::DataFrame)
+
+Coerces the input DataFrame `df` to the required scientific types for model training.
+
+# Arguments
+- `df::DataFrame`: A DataFrame where the first 13 columns represent the features and the 14th column is the target variable.
+
+# Returns
+- `X`: A DataFrame where the first 13 feature columns have been coerced to `Continuous` scientific type.
+- `y`: A vector where the 14th column (target) has been coerced to `OrderedFactor` scientific type.
+
+# Example
+```julia
+X, y = coerce_features_and_target_to_scitypes(df)
+
+"""
+
+function coerce_features_and_target_to_scitypes(df::DataFrame)
+    # Coerce the first 13 columns (features) to Continuous
+    X = coerce(select(df, 1:13), Count => Continuous)
+
+    # Coerce the 14th column (target) to OrderedFactor
+    y = coerce(df[:, 14], OrderedFactor)
+
+    return X, y
+end
+
+
