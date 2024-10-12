@@ -8,7 +8,7 @@ using InteractiveUtils
 using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, Plots, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, MLJXGBoostInterface, Random, XGBoost
 
 # ╔═╡ 5034f5fc-0328-40b6-aa24-176ad10d6370
-include("src/data_clean.jl")
+include("../..src/data_clean.jl")
 
 # ╔═╡ f75fa5da-cca1-400f-8d2b-0c88c5f20c6e
 md"""
@@ -29,7 +29,7 @@ md"""
 """
 
 # ╔═╡ 6f3ecc26-8800-41ee-ad24-d4e6bb9a2ed9
-df= CSV.read("data/DS2_imputed/imputed.processed.long_beach.csv", DataFrame)
+df= CSV.read("../..data/DS2_imputed/imputed.processed.long_beach.csv", DataFrame)
 
 # ╔═╡ 89e80d11-27d9-4461-ba54-9e8468eedeb7
 begin	
