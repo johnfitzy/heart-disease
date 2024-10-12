@@ -14,19 +14,51 @@ clean_value("invalid", Int64)  # Returns missing
 clean_value(missing, Float64)  # Returns missing
 """
 
+#function clean_value(x, desired_type)
+#     if x isa AbstractString
+#         stripped_x = strip(x)
+#         try
+#             return parse(desired_type, stripped_x)
+#         catch e
+#             return missing
+#         end
+#     elseif x isa Number
+#         return convert(desired_type, x)  # Convert to the desired type if it's a number
+#     else
+#         return x  # Return as is for missing or already cleaned values
+#     end
+# end
+
+
 function clean_value(x, desired_type)
-    if x isa AbstractString
+    	if x isa Float64 && desired_type == Int64
+		return round(Int, x)
+	elseif x isa AbstractString
         stripped_x = strip(x)
-        try
-            return parse(desired_type, stripped_x)
-        catch e
-            return missing
+	
+	
+    try
+		# as desired
+        return parse(desired_type, stripped_x)
+    catch e
+        if e isa ArgumentError
+            try
+				# Crappy code - fall back option is float to int
+                return round(Int, parse(Float64, stripped_x))
+            catch
+                # If it fails, return missing
+                return missing
+
+            end
+        else
+            # Re-throw if it's another type of error
+            rethrow(e)
         end
-    elseif x isa Number
-        return convert(desired_type, x)  # Convert to the desired type if it's a number
-    else
-        return x  # Return as is for missing or already cleaned values
     end
+    end
+
+	return x
+
 end
 
 """
@@ -196,6 +228,33 @@ function coerce_features_and_target_to_scitypes(df::DataFrame)
     y = coerce(df[:, 14], OrderedFactor)
 
     return X, y
+end
+
+
+"""
+    map_thal_column!(df::DataFrame) -> DataFrame
+
+This function modifies the `thal` column in the provided DataFrame `df`. It maps the values in the `thal` column as follows:
+- Missing values remain unchanged.
+- A value of `3` is mapped to `1`.
+- A value of `6` is mapped to `2`.
+- A value of `7` is mapped to `3`.
+
+# Arguments
+- `df::DataFrame`: The DataFrame that contains a column named `thal`.
+
+# Returns
+- The modified DataFrame with the `thal` column updated in place.
+
+# Example
+```julia
+df = DataFrame(thal = [3, 6, 7, missing, 3])
+map_thal_column!(df)
+# Result: DataFrame with `thal` column values [1, 2, 3, missing, 1]
+"""
+
+function map_thal_column!(df::DataFrame)
+    df.thal = map(x -> ismissing(x) ? x : x == 3 ? 1 : x == 6 ? 2 : 3, df.thal)
 end
 
 
