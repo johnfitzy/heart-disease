@@ -5,13 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 227bdb14-8808-11ef-034e-c19fe8615cec
-begin
-
-	using DataFrames, MLJ, MLJLinearModels, Plots, StatsPlots, Random,  HypothesisTests
-
-	include("src/data_clean.jl")
-
-end
+using DataFrames, MLJ, MLJLinearModels, Plots, StatsPlots, Random,  HypothesisTests
 
 # ╔═╡ a822f51f-ab98-43ab-aa75-4c1fb76476f6
 LogisticClassifier = @load LogisticClassifier pkg=MLJLinearModels verbosity=0
