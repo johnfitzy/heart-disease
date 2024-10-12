@@ -4,72 +4,37 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 542578f6-8823-11ef-3f6c-bd5a89644fa6
+# ╔═╡ c51ca81e-8865-11ef-013e-4b6b7c978355
 using DataFrames, CSV,  MLJ, MLJLinearModels, Plots, StatsPlots, Random,  HypothesisTests, MLJMultivariateStatsInterface
 
-# ╔═╡ e1a48d14-037a-4331-b13a-3b229214c389
+# ╔═╡ 6479e71e-667d-479e-a165-32791c693a62
 include("../../src/data_clean.jl")
 
-# ╔═╡ 0c2dcc21-4093-4a05-9add-d79cf8ad1b6a
+# ╔═╡ 4d488560-f97e-47cb-b7ec-b06129cafed4
 md"""
-# Logistic Regression - DS1 heart.dat
+# Logistic Regression - DS2 imputed.processed.hungarian.csv
 """
 
-# ╔═╡ 55d0e339-e2a5-413b-a766-f9051c543db3
-begin
-	# Define the column names
-	column_names = [
-    	"age", 
-    	"sex", 
-    	"chest_pain", 
-    	"rest_bp", 
-    	"serum_chol", 
-	    "fasting_blood_sugar", 
-		"electrocardiographic", 
-	 	"max_heart_rate", 
-   	 	"angina", 
-    	"oldpeak", 
-    	"slope", 
-    	"major_vessels", 
-    	"thal", 
-    	"heart_disease"
-	]
+# ╔═╡ ac0eee90-3679-472a-97be-3d489fc5fa7b
+df = CSV.read("../../data/DS2_imputed/imputed.processed.hungarian.csv", 
+	delim=',', 
+	DataFrame) 
 
-	# Open file as CSV
-	df = CSV.read("../../data/DS1/heart.dat", 
-		delim=' ', 
-		header=column_names,
-		DataFrame) 
+# ╔═╡ 184762f2-df9a-495e-870b-05af14f9afbf
+# X features coerce to scitype Continuous as that's what the model wants
+# y targes coerce to scitype OrderdFactor as that's what the model wants
+X, y = coerce_features_and_target_to_scitypes(df)
 
-	# Change 1 to 0 and 2 to 1 so the madel is consistant across datasets
-	df.heart_disease = map(x -> x == 1 ? 0 : x == 2 ? 1 : -1 , df.heart_disease)
-
-	# Just be extra sure the -1 didn't end up in there. 
-	if -1 in df.heart_disease
-		 throw(ArgumentError("The list contains a forbidden value: -1"))
-	end
-	
-end
-
-# ╔═╡ 2623efd6-f1fc-48a8-b5d0-dad6436aebe0
-# Prepare X and y data
-begin	
-
-	# X features coerce to scitype Continuous as that's what the model wants
-	# y targes coerce to scitype OrderdFactor as that's what the model wants
-	X, y = coerce_features_and_target_to_scitypes(df)
-end
-
-# ╔═╡ 319d966e-d2cd-42e8-bcc2-fe9d379ab054
+# ╔═╡ 86f22f7a-486d-4ff0-ae1e-0a217e5c2766
 md"""
 # Parameter Tuning
 ### Find the best parameters for the model
 """
 
-# ╔═╡ d7bdaf56-c52a-4847-8d8f-85eb6374c7cf
+# ╔═╡ b9d8eb74-cf88-48f4-b501-79327217a9b6
 LogisticClassifier = @load LogisticClassifier pkg=MLJLinearModels verbosity=0
 
-# ╔═╡ f5b1309b-3bb7-47cb-beb3-212823d071be
+# ╔═╡ f610d305-f297-4ac8-8656-176f547e5304
 begin
 
 	model = LogisticClassifier()
@@ -97,12 +62,12 @@ begin
 	rep = report(mach)	
 end
 
-# ╔═╡ 782e5f53-f4c5-4596-b259-5165d0744a45
+# ╔═╡ 72164307-1a47-4591-a42d-7d1a11003f93
 md"""
 # Best Model
 """
 
-# ╔═╡ d5eb0a1b-39ce-44b8-bc6d-dbabb63622f4
+# ╔═╡ 51680451-2619-4e9c-9d25-6854bc3a1939
 begin
 
 	best_model = rep.best_model
@@ -120,21 +85,21 @@ begin
 	y_pred_best = predict_mode(best_model_mach, X)
 end
 
-# ╔═╡ eb4a9547-b2dd-4391-8309-672ab33dedcd
+# ╔═╡ 3e6f38c4-2a11-4417-b530-aa23ea3bd280
 md"""
 # Performance Evaluation of Best Model
 ### Confusion Matrix
 """
 
-# ╔═╡ 62a45d09-6703-4bec-9aff-6f22fbd51ac3
+# ╔═╡ 283b229f-7f05-4899-9e79-778d98646d68
 ConfusionMatrix()(y_pred_best, y)
 
-# ╔═╡ a33ede6f-0d68-424b-aae0-64554f14d987
+# ╔═╡ ff3e558c-a1bc-4a27-be3c-7615e5110e13
 md"""
 ### ROC Curve
 """
 
-# ╔═╡ 83e28242-8e71-4580-83df-6441513f0421
+# ╔═╡ f054dfc7-a99b-40ad-88ef-ab1501f03ecc
 begin
 	# Plot ROC 
 	fprs, tprs, thresholds = roc_curve(y_pred_prob, y)
@@ -143,43 +108,44 @@ begin
 
 end
 
-# ╔═╡ 5e07681d-c0fd-45ad-ae5b-238c60247f9d
+# ╔═╡ e72c7379-56b3-4e20-8ebf-697952ff8081
 begin
 	@info "Model accuracy: $(MLJ.accuracy(y_pred_best, y))"
 	@info "AUC: $(auc(y_pred_prob, y))"
 end
 
-# ╔═╡ a259f983-8888-4363-92d7-7accac42e0d7
+# ╔═╡ 1f22734e-8790-48a7-8156-606b4a703499
 md"""
 # Comments:
 ## Comment on ConfusionMatrix:
-- True Positives (TP) for class 0: 135 instances of class 0 were correctly predicted as class 1.
-- False Positives (FP) for class 0: 23 instances were incorrectly predicted as class 0 but actually belong to class 1.
-- True Negatives (TN) for class 1: 97 instances of class 1 were correctly predicted as class 1.
-- False Negatives (FN) for class 1: 15 instances were incorrectly predicted as class 1 but actually belong to class 0.
+- True Positives (TP) for class 0: 175 instances of class 0 were correctly predicted as class 0.
+- False Positives (FP) for class 0: 13 instances were incorrectly predicted as class 0 but actually belong to class 1.
+- True Negatives (TN) for class 1: 80 instances of class 1 were correctly predicted as class 1.
+- False Negatives (FN) for class 1: 26 instances were incorrectly predicted as class 1 but actually belong to class 0.
 
 ## Model Accuracy:
-- Model accuracy: 0.86
-  - This means the model correctly predicted 86% of the total instances.
+- Model accuracy: 0.867
+  - This means the model correctly predicted 86.7% of the total instances.
 
 ## ROC Curve and AUC:
 - The ROC (Receiver Operating Characteristic) curve plots the True Positive Rate (TPR) against the False Positive Rate (FPR) at various threshold settings.
 - A higher ROC curve indicates better performance. The closer the curve is to the top left corner, the better the model is at distinguishing between the classes.
 - The AUC (Area Under the Curve) summarizes the ROC curve performance; a value of 1.0 represents perfect classification, while a value of 0.5 represents random guessing.
-- The AUC is 0.91 which doesn't seem too bad
+- The AUC for this model is 0.901, which shows strong performance in distinguishing between the classes.
+
+
 """
 
-
-# ╔═╡ f6bea807-5dbe-47d5-9da4-2db6a12a2494
+# ╔═╡ 7a5766b9-a1e0-42b0-b371-8a9aba545169
 md"""
 # Visualise
 ### Plot against PCA
 """
 
-# ╔═╡ e2d6811b-7184-4d84-8b9c-1b0f08d0c6bb
+# ╔═╡ 3e44a8cc-1132-4ea7-a361-931395fe3791
 PCA_model = @load PCA pkg=MultivariateStats
 
-# ╔═╡ f6070d26-5326-4eee-9a71-518f7eb4e22c
+# ╔═╡ 75c70dbe-a4da-458b-9bee-d007997858e8
 begin
 
 	pca_model = PCA_model(maxoutdim=2)  # Reducing to 2 principal components
@@ -2378,24 +2344,24 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═0c2dcc21-4093-4a05-9add-d79cf8ad1b6a
-# ╠═542578f6-8823-11ef-3f6c-bd5a89644fa6
-# ╠═e1a48d14-037a-4331-b13a-3b229214c389
-# ╠═55d0e339-e2a5-413b-a766-f9051c543db3
-# ╠═2623efd6-f1fc-48a8-b5d0-dad6436aebe0
-# ╠═319d966e-d2cd-42e8-bcc2-fe9d379ab054
-# ╠═d7bdaf56-c52a-4847-8d8f-85eb6374c7cf
-# ╠═f5b1309b-3bb7-47cb-beb3-212823d071be
-# ╠═782e5f53-f4c5-4596-b259-5165d0744a45
-# ╠═d5eb0a1b-39ce-44b8-bc6d-dbabb63622f4
-# ╠═eb4a9547-b2dd-4391-8309-672ab33dedcd
-# ╠═62a45d09-6703-4bec-9aff-6f22fbd51ac3
-# ╠═a33ede6f-0d68-424b-aae0-64554f14d987
-# ╠═83e28242-8e71-4580-83df-6441513f0421
-# ╠═5e07681d-c0fd-45ad-ae5b-238c60247f9d
-# ╠═a259f983-8888-4363-92d7-7accac42e0d7
-# ╠═f6bea807-5dbe-47d5-9da4-2db6a12a2494
-# ╠═e2d6811b-7184-4d84-8b9c-1b0f08d0c6bb
-# ╠═f6070d26-5326-4eee-9a71-518f7eb4e22c
+# ╟─4d488560-f97e-47cb-b7ec-b06129cafed4
+# ╠═c51ca81e-8865-11ef-013e-4b6b7c978355
+# ╠═6479e71e-667d-479e-a165-32791c693a62
+# ╠═ac0eee90-3679-472a-97be-3d489fc5fa7b
+# ╠═184762f2-df9a-495e-870b-05af14f9afbf
+# ╠═86f22f7a-486d-4ff0-ae1e-0a217e5c2766
+# ╠═b9d8eb74-cf88-48f4-b501-79327217a9b6
+# ╠═f610d305-f297-4ac8-8656-176f547e5304
+# ╠═72164307-1a47-4591-a42d-7d1a11003f93
+# ╠═51680451-2619-4e9c-9d25-6854bc3a1939
+# ╠═3e6f38c4-2a11-4417-b530-aa23ea3bd280
+# ╠═283b229f-7f05-4899-9e79-778d98646d68
+# ╠═ff3e558c-a1bc-4a27-be3c-7615e5110e13
+# ╠═f054dfc7-a99b-40ad-88ef-ab1501f03ecc
+# ╟─e72c7379-56b3-4e20-8ebf-697952ff8081
+# ╟─1f22734e-8790-48a7-8156-606b4a703499
+# ╠═7a5766b9-a1e0-42b0-b371-8a9aba545169
+# ╠═3e44a8cc-1132-4ea7-a361-931395fe3791
+# ╠═75c70dbe-a4da-458b-9bee-d007997858e8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
