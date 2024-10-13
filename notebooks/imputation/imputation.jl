@@ -8,8 +8,8 @@ using InteractiveUtils
 begin
 	using DataFrames, CSV, Statistics, Plots, StatsPlots, Distributions, Impute, HypothesisTests, BetaML
 	
-	include("src/plotting_functions.jl")
-	include("src/data_clean.jl")
+	include("../../src/plotting_functions.jl")
+	include("../../src/data_clean.jl")
 end
 
 # ╔═╡ c73fa2a5-086a-4acb-9ba9-7d8f1fe422d5
@@ -64,31 +64,28 @@ begin
 
 	
 	# Open files
-	df_ds1 = CSV.read("data/DS1/heart.dat", 
+	df_ds1 = CSV.read("../../data/DS1/heart.dat", 
 		header=column_names, 
 		DataFrame) 
 	
-	df_clev = CSV.read("data/DS2/processed.cleveland.data", 
+	df_clev = CSV.read("../../data/DS2/processed.cleveland.data", 
 		header=column_names,
 		DataFrame) 
 
-	df_hung = CSV.read("data/DS2/processed.hungarian.data", 
+	df_hung = CSV.read("../../data/DS2/processed.hungarian.data", 
 		header=column_names, 
 		DataFrame) 
 
 	# long-beach-va.data
 
-	df_swiss = CSV.read("data/DS2/processed.switzerland.data", 
+	df_swiss = CSV.read("../../data/DS2/processed.switzerland.data", 
 		header=column_names, 
 		DataFrame)
 
-	df_lng_beach = CSV.read("data/DS2/processed.va.data", 
+	df_lng_beach = CSV.read("../../data/DS2/processed.va.data", 
 		header=column_names,
 		DataFrame)
 end
-
-# ╔═╡ e4cbd0c2-ac1a-4e6e-9cd6-c56c21166638
-df_clev
 
 # ╔═╡ 25fb27ce-b19f-4d56-9534-75f778e36e09
 md"""
@@ -120,23 +117,21 @@ begin
 	# Make copies for comparison
 	# clean (correct types, remove strings,  add 'missing') 
 	# and flatten pooled arrays for easier processing
-
 	clean_and_flatten!(df_hung)
 	
-
 	df_hung_inte = copy(df_hung)
-	clean_and_flatten!(df_hung_inte)
-
 	df_hung_knn = copy(df_hung)
-	clean_and_flatten!(df_hung_knn)
-
 	df_hung_forest = copy(df_hung)
+
+	clean_and_flatten!(df_hung)
+	clean_and_flatten!(df_hung_inte)
+	clean_and_flatten!(df_hung_knn)
 	clean_and_flatten!(df_hung_forest)
 
-	# Map that 3, 6, 7 to 1, 2, 3
-	map_thal_column!(df_hung)
-	map_thal_column!(df_hung_knn)
-	map_thal_column!(df_hung_forest)
+	# Map thal 3, 6, 7 to 1, 2, 3
+	replace!(df_hung.thal, 3 => 1, 6 => 2, 7 => 3)
+	replace!(df_hung_knn.thal, 3 => 1, 6 => 2, 7 => 3)
+	replace!(df_hung_forest.thal, 3 => 1, 6 => 2, 7 => 3)
 end
 
 # ╔═╡ 3ac38a0d-ade5-43b7-a077-f81277572f81
@@ -556,17 +551,25 @@ end
 end
 
 # ╔═╡ d27322ad-d7dc-407d-a170-fc0d46fc34ec
+# ╠═╡ disabled = true
+#=╠═╡
 #Imputing all the dataframes with the chosen method and writing to CSV
 begin
 
-	root_path = pwd()
+	root_path = "../../"
 	
 	function process_and_impute_dataframe(df::DataFrame, file_name::String)
+
+		root_path = "../../"
     	
 		# Apply cleaning and transformations
     	clean_and_flatten!(df)
-    	map_thal_column!(df)
-
+	
+		replace!(df.thal, 3 => 1, 6 => 2, 7 => 3)
+		
+		# Map 1, 2, 3, 4 to 1 has heart_disease
+		replace!(df.heart_disease, 4 => 1, 3 => 1, 2 => 1)
+	
     	# Impute missing data using RandomForest
     	df_imputed = impute_random_forest(df)
 
@@ -588,6 +591,23 @@ begin
 
 	
 end
+  ╠═╡ =#
+
+# ╔═╡ 0159a4c4-134e-4498-94f6-d46c52a21ef8
+# ╠═╡ disabled = true
+#=╠═╡
+# map 1 to 0 2 to 1 from original
+
+begin
+
+	clean_and_flatten!(df_ds1)
+	replace!(df_ds1.thal, 3 => 1, 6 => 2, 7 => 3)
+	replace!(df_ds1.heart_disease, 1 => 0, 2 => 1)
+
+	CSV.write(joinpath(root_path, "data", "DS1", "heart.csv"), df_ds1)
+	
+end
+  ╠═╡ =#
 
 # ╔═╡ 772d1cff-a81c-4447-a7e0-912ee4a94483
 md"""
@@ -2599,7 +2619,6 @@ version = "1.4.1+1"
 # ╠═ade4c104-8524-11ef-154d-b1ab7693c3c7
 # ╠═9c90868e-a7e2-4f5e-80c5-b2775e575924
 # ╠═39a821b3-fad9-42f1-ab74-3260316fc36c
-# ╠═e4cbd0c2-ac1a-4e6e-9cd6-c56c21166638
 # ╟─25fb27ce-b19f-4d56-9534-75f778e36e09
 # ╠═0dd9a78a-ba38-4acf-942f-43d0760b9945
 # ╠═8cceaf6d-63da-400f-847e-e825f6428b68
@@ -2633,6 +2652,7 @@ version = "1.4.1+1"
 # ╟─bc635561-7a39-4d5e-8738-21ac54819967
 # ╠═31cacb50-0efd-4e33-8009-91bd2e171a43
 # ╠═d27322ad-d7dc-407d-a170-fc0d46fc34ec
+# ╠═0159a4c4-134e-4498-94f6-d46c52a21ef8
 # ╠═772d1cff-a81c-4447-a7e0-912ee4a94483
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
