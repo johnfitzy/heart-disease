@@ -257,4 +257,6 @@ function map_thal_column!(df::DataFrame)
     df.thal = map(x -> ismissing(x) ? x : x == 3 ? 1 : x == 6 ? 2 : 3, df.thal)
 end
 
-
+function map_heartd_column_1_2_3_4!(df::DataFrame)
+    df.heart_disease = map(x -> x == 4 ? 1 : x == 3 ? 1 : x == 2 ? 1 : x, df.heart_disease)
+end
