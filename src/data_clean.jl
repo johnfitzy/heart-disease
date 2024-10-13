@@ -229,26 +229,3 @@ function coerce_features_and_target_to_scitypes(df::DataFrame)
 
     return X, y
 end
-
-
-"""
-    map_thal_column!(df::DataFrame) -> DataFrame
-
-This function modifies the `thal` column in the provided DataFrame `df`. It maps the values in the `thal` column as follows:
-- Missing values remain unchanged.
-- A value of `3` is mapped to `1`.
-- A value of `6` is mapped to `2`.
-- A value of `7` is mapped to `3`.
-
-# Arguments
-- `df::DataFrame`: The DataFrame that contains a column named `thal`.
-
-# Returns
-- The modified DataFrame with the `thal` column updated in place.
-
-# Example
-```julia
-df = DataFrame(thal = [3, 6, 7, missing, 3])
-map_thal_column!(df)
-# Result: DataFrame with `thal` column values [1, 2, 3, missing, 1]
-"""
