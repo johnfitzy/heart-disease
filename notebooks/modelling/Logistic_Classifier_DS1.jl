@@ -97,7 +97,7 @@ end
 #=╠═╡
 begin
 	using JLSO
-	MLJ.save("../models/Logistic_Classifier_DS1_Model.jls", best_model_mach)
+	MLJ.save("../../models/Logistic_Classifier_DS1_Model.jls", best_model_mach)
 end
   ╠═╡ =#
 
@@ -184,7 +184,7 @@ end
 #=╠═╡
 begin
 	# Restore the model -  testing
-	restored_mach = machine("../models/Logistic_Classifier_DS1_Model.jls")
+	restored_mach = machine("../../models/Logistic_Classifier_DS1_Model.jls")
 end
   ╠═╡ =#
 
