@@ -12,43 +12,13 @@ include("../../src/data_clean.jl")
 
 # ╔═╡ 0c2dcc21-4093-4a05-9add-d79cf8ad1b6a
 md"""
-# Logistic Regression - DS1 heart.dat
+# Logistic Regression - DS1 heart.csv
 """
 
 # ╔═╡ 55d0e339-e2a5-413b-a766-f9051c543db3
 begin
-	# Define the column names
-	column_names = [
-    	"age", 
-    	"sex", 
-    	"chest_pain", 
-    	"rest_bp", 
-    	"serum_chol", 
-	    "fasting_blood_sugar", 
-		"electrocardiographic", 
-	 	"max_heart_rate", 
-   	 	"angina", 
-    	"oldpeak", 
-    	"slope", 
-    	"major_vessels", 
-    	"thal", 
-    	"heart_disease"
-	]
-
 	# Open file as CSV
-	df = CSV.read("../../data/DS1/heart.dat", 
-		delim=' ', 
-		header=column_names,
-		DataFrame) 
-
-	# Change 1 to 0 and 2 to 1 so the madel is consistant across datasets
-	df.heart_disease = map(x -> x == 1 ? 0 : x == 2 ? 1 : -1 , df.heart_disease)
-
-	# Just be extra sure the -1 didn't end up in there. 
-	if -1 in df.heart_disease
-		 throw(ArgumentError("The list contains a forbidden value: -1"))
-	end
-	
+	df = CSV.read("../../data/DS1/heart.csv", DataFrame) 
 end
 
 # ╔═╡ 2623efd6-f1fc-48a8-b5d0-dad6436aebe0
@@ -71,6 +41,8 @@ LogisticClassifier = @load LogisticClassifier pkg=MLJLinearModels verbosity=0
 
 # ╔═╡ f5b1309b-3bb7-47cb-beb3-212823d071be
 begin
+	
+	train, test = partition(eachindex(y), 0.7, rng=1) # 70:30 split
 
 	model = LogisticClassifier()
 
@@ -86,13 +58,13 @@ begin
     	tuning=Grid(resolution=10), # Number of distinct values in range to test
     	resampling=CV(nfolds=6),
     	ranges=[r_lambda, r_penalty],
-    	measure=cross_entropy
+    	measure=cross_entropy # loss function
 	)
 
 	# Create the machine and fit it
-	mach = machine(tuning_model, X, y)
+	mach = machine(tuning_model, X[train, :], y[train])
 	MLJ.fit!(mach)
-
+	
 	# Report best parameter settings
 	rep = report(mach)	
 end
@@ -108,17 +80,26 @@ begin
 	best_model = rep.best_model
 	
 	# Create a machine with the best model
-	best_model_mach = machine(best_model, X, y)
+	best_model_mach = machine(best_model, X[train, :], y[train])
 
 	# Fit it
 	MLJ.fit!(best_model_mach)
 
 	# Predict probabilities for the positive class
-	y_pred_prob = predict(best_model_mach, X)
+	y_pred_prob = predict(best_model_mach, X[test, :])
 
 	# Convert probabilities to hard class predictions (0 or 1)
-	y_pred_best = predict_mode(best_model_mach, X)
+	y_pred_best = predict_mode(best_model_mach, X[test, :])
 end
+
+# ╔═╡ 83226fd9-8274-436c-b169-9b196d3a3d3d
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	using JLSO
+	MLJ.save("../models/Logistic_Classifier_DS1_Model.jls", best_model_mach)
+end
+  ╠═╡ =#
 
 # ╔═╡ eb4a9547-b2dd-4391-8309-672ab33dedcd
 md"""
@@ -127,7 +108,7 @@ md"""
 """
 
 # ╔═╡ 62a45d09-6703-4bec-9aff-6f22fbd51ac3
-ConfusionMatrix()(y_pred_best, y)
+ConfusionMatrix()(y_pred_best, y[test])
 
 # ╔═╡ a33ede6f-0d68-424b-aae0-64554f14d987
 md"""
@@ -137,7 +118,7 @@ md"""
 # ╔═╡ 83e28242-8e71-4580-83df-6441513f0421
 begin
 	# Plot ROC 
-	fprs, tprs, thresholds = roc_curve(y_pred_prob, y)
+	fprs, tprs, thresholds = roc_curve(y_pred_prob, y[test])
 
 	plot(fprs, tprs, label="Logistic Classifier", xlabel="False Positive Rate", ylabel="True Positive Rate", title="ROC Curve for Logistic Classifier")
 
@@ -145,28 +126,28 @@ end
 
 # ╔═╡ 5e07681d-c0fd-45ad-ae5b-238c60247f9d
 begin
-	@info "Model accuracy: $(MLJ.accuracy(y_pred_best, y))"
-	@info "AUC: $(auc(y_pred_prob, y))"
+	@info "Model accuracy: $(MLJ.accuracy(y_pred_best, y[test]))"
+	@info "AUC: $(auc(y_pred_prob, y[test]))"
 end
 
 # ╔═╡ a259f983-8888-4363-92d7-7accac42e0d7
 md"""
 # Comments:
-## Comment on ConfusionMatrix:
-- True Positives (TP) for class 0: 135 instances of class 0 were correctly predicted as class 1.
-- False Positives (FP) for class 0: 23 instances were incorrectly predicted as class 0 but actually belong to class 1.
-- True Negatives (TN) for class 1: 97 instances of class 1 were correctly predicted as class 1.
-- False Negatives (FN) for class 1: 15 instances were incorrectly predicted as class 1 but actually belong to class 0.
+## Comment on Confusion Matrix:
+- True Positives (TP) for class 1: 29 instances of class 1 were correctly predicted as class 1.
+- False Positives (FP) for class 1: 6 instances were incorrectly predicted as class 1 but actually belong to class 0.
+- True Negatives (TN) for class 0: 36 instances of class 0 were correctly predicted as class 0.
+- False Negatives (FN) for class 0: 10 instances were incorrectly predicted as class 0 but actually belong to class 1.
 
 ## Model Accuracy:
-- Model accuracy: 0.86
-  - This means the model correctly predicted 86% of the total instances.
+- Model accuracy: 0.802
+  - This means the model correctly predicted approximately 80.2% of the total instances.
 
 ## ROC Curve and AUC:
 - The ROC (Receiver Operating Characteristic) curve plots the True Positive Rate (TPR) against the False Positive Rate (FPR) at various threshold settings.
 - A higher ROC curve indicates better performance. The closer the curve is to the top left corner, the better the model is at distinguishing between the classes.
 - The AUC (Area Under the Curve) summarizes the ROC curve performance; a value of 1.0 represents perfect classification, while a value of 0.5 represents random guessing.
-- The AUC is 0.91 which doesn't seem too bad
+- The AUC is 0.911, which indicates strong model performance.
 """
 
 
@@ -198,12 +179,32 @@ begin
    	 	title="PCA plot of features after Basic Logistic Regression")
 end
 
+# ╔═╡ a314e13e-ae44-4575-bed2-60839126509a
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	# Restore the model -  testing
+	restored_mach = machine("../models/Logistic_Classifier_DS1_Model.jls")
+end
+  ╠═╡ =#
+
+# ╔═╡ 85006dcc-f2fe-4b87-8d64-d0a51b00dfec
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	y_pred_bestold = predict_mode(best_model_mach, X[test, :])
+	y_pred_bestnew = predict_mode(restored_mach, X[test, :])
+	y_pred_bestold == y_pred_bestnew
+end
+  ╠═╡ =#
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
+JLSO = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
 MLJMultivariateStatsInterface = "1b6a4a23-ba22-4f51-9698-8599985d3728"
@@ -215,6 +216,7 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 DataFrames = "~1.7.0"
 HypothesisTests = "~0.11.3"
+JLSO = "~2.7.0"
 MLJ = "~0.20.7"
 MLJLinearModels = "~0.10.0"
 MLJMultivariateStatsInterface = "~0.5.3"
@@ -228,7 +230,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "61220924fc0eb99de12f9286754a70f283ca31e1"
+project_hash = "fc0e27efa10d26305711a6e4295309610589e140"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -353,6 +355,11 @@ deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
 git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.1.0"
+
+[[deps.BSON]]
+git-tree-sha1 = "4c3e506685c527ac6a54ccc0c8c76fd6f91b42fb"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.9"
 
 [[deps.BangBang]]
 deps = ["Accessors", "ConstructionBase", "InitialValues", "LinearAlgebra", "Requires"]
@@ -982,6 +989,12 @@ git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
 version = "1.6.1"
 
+[[deps.JLSO]]
+deps = ["BSON", "CodecZlib", "FilePathsBase", "Memento", "Pkg", "Serialization"]
+git-tree-sha1 = "7e3821e362ede76f83a39635d177c63595296776"
+uuid = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
+version = "2.7.0"
+
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
@@ -1341,6 +1354,12 @@ version = "2.28.2+1"
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.2"
+
+[[deps.Memento]]
+deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
+git-tree-sha1 = "bb2e8f4d9f400f6e90d57b34860f6abdc51398e5"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.4.1"
 
 [[deps.MicroCollections]]
 deps = ["Accessors", "BangBang", "InitialValues"]
@@ -2388,14 +2407,17 @@ version = "1.4.1+1"
 # ╠═f5b1309b-3bb7-47cb-beb3-212823d071be
 # ╠═782e5f53-f4c5-4596-b259-5165d0744a45
 # ╠═d5eb0a1b-39ce-44b8-bc6d-dbabb63622f4
-# ╠═eb4a9547-b2dd-4391-8309-672ab33dedcd
+# ╟─eb4a9547-b2dd-4391-8309-672ab33dedcd
 # ╠═62a45d09-6703-4bec-9aff-6f22fbd51ac3
 # ╠═a33ede6f-0d68-424b-aae0-64554f14d987
 # ╠═83e28242-8e71-4580-83df-6441513f0421
 # ╠═5e07681d-c0fd-45ad-ae5b-238c60247f9d
-# ╠═a259f983-8888-4363-92d7-7accac42e0d7
+# ╟─a259f983-8888-4363-92d7-7accac42e0d7
 # ╠═f6bea807-5dbe-47d5-9da4-2db6a12a2494
 # ╠═e2d6811b-7184-4d84-8b9c-1b0f08d0c6bb
 # ╠═f6070d26-5326-4eee-9a71-518f7eb4e22c
+# ╠═83226fd9-8274-436c-b169-9b196d3a3d3d
+# ╠═a314e13e-ae44-4575-bed2-60839126509a
+# ╠═85006dcc-f2fe-4b87-8d64-d0a51b00dfec
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
