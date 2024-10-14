@@ -37,6 +37,8 @@ LogisticClassifier = @load LogisticClassifier pkg=MLJLinearModels verbosity=0
 # ╔═╡ f610d305-f297-4ac8-8656-176f547e5304
 begin
 
+	train, test = partition(eachindex(y), 0.7, rng=1) # 70:30 split
+	
 	model = LogisticClassifier()
 
 	# Range for the strength of the regularizer (lambda)
@@ -55,7 +57,7 @@ begin
 	)
 
 	# Create the machine and fit it
-	mach = machine(tuning_model, X, y)
+	mach = machine(tuning_model, X[train, :], y[train])
 	MLJ.fit!(mach)
 
 	# Report best parameter settings
@@ -73,17 +75,27 @@ begin
 	best_model = rep.best_model
 	
 	# Create a machine with the best model
-	best_model_mach = machine(best_model, X, y)
+	best_model_mach = machine(best_model, X[train, :], y[train])
 
 	# Fit it
 	MLJ.fit!(best_model_mach)
 
 	# Predict probabilities for the positive class
-	y_pred_prob = predict(best_model_mach, X)
+	y_pred_prob = predict(best_model_mach, X[test, :])
 
 	# Convert probabilities to hard class predictions (0 or 1)
-	y_pred_best = predict_mode(best_model_mach, X)
+	y_pred_best = predict_mode(best_model_mach, X[test, :])
 end
+
+# ╔═╡ 9a8d3e58-be76-4cce-aa11-dffa21910bc9
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
+begin
+	using JLSO
+	MLJ.save("../../models/Logistic_Classifier_DS2_Hungarian_Model.jls", best_model_mach)
+end
+  ╠═╡ =#
 
 # ╔═╡ 3e6f38c4-2a11-4417-b530-aa23ea3bd280
 md"""
@@ -92,7 +104,7 @@ md"""
 """
 
 # ╔═╡ 283b229f-7f05-4899-9e79-778d98646d68
-ConfusionMatrix()(y_pred_best, y)
+ConfusionMatrix()(y_pred_best, y[test])
 
 # ╔═╡ ff3e558c-a1bc-4a27-be3c-7615e5110e13
 md"""
@@ -102,7 +114,7 @@ md"""
 # ╔═╡ f054dfc7-a99b-40ad-88ef-ab1501f03ecc
 begin
 	# Plot ROC 
-	fprs, tprs, thresholds = roc_curve(y_pred_prob, y)
+	fprs, tprs, thresholds = roc_curve(y_pred_prob, y[test])
 
 	plot(fprs, tprs, label="Logistic Classifier", xlabel="False Positive Rate", ylabel="True Positive Rate", title="ROC Curve for Logistic Classifier")
 
@@ -110,28 +122,28 @@ end
 
 # ╔═╡ e72c7379-56b3-4e20-8ebf-697952ff8081
 begin
-	@info "Model accuracy: $(MLJ.accuracy(y_pred_best, y))"
-	@info "AUC: $(auc(y_pred_prob, y))"
+	@info "Model accuracy: $(MLJ.accuracy(y_pred_best, y[test]))"
+	@info "AUC: $(auc(y_pred_prob, y[test]))"
 end
 
 # ╔═╡ 1f22734e-8790-48a7-8156-606b4a703499
 md"""
 # Comments:
 ## Comment on ConfusionMatrix:
-- True Positives (TP) for class 0: 175 instances of class 0 were correctly predicted as class 0.
-- False Positives (FP) for class 0: 13 instances were incorrectly predicted as class 0 but actually belong to class 1.
-- True Negatives (TN) for class 1: 80 instances of class 1 were correctly predicted as class 1.
-- False Negatives (FN) for class 1: 26 instances were incorrectly predicted as class 1 but actually belong to class 0.
+- True Positives (TP) for class 0: 52 instances of class 0 were correctly predicted as class 0.
+- False Positives (FP) for class 0: 6 instances were incorrectly predicted as class 0 but actually belong to class 1.
+- True Negatives (TN) for class 1: 20 instances of class 1 were correctly predicted as class 1.
+- False Negatives (FN) for class 1: 10 instances were incorrectly predicted as class 1 but actually belong to class 0.
 
 ## Model Accuracy:
-- Model accuracy: 0.867
-  - This means the model correctly predicted 86.7% of the total instances.
+- Model accuracy: 0.818
+  - This means the model correctly predicted 81.8% of the total instances.
 
 ## ROC Curve and AUC:
 - The ROC (Receiver Operating Characteristic) curve plots the True Positive Rate (TPR) against the False Positive Rate (FPR) at various threshold settings.
 - A higher ROC curve indicates better performance. The closer the curve is to the top left corner, the better the model is at distinguishing between the classes.
 - The AUC (Area Under the Curve) summarizes the ROC curve performance; a value of 1.0 represents perfect classification, while a value of 0.5 represents random guessing.
-- The AUC for this model is 0.901, which shows strong performance in distinguishing between the classes.
+- The AUC for this model is 0.845, which indicates reasonable performance in distinguishing between the classes.
 
 
 """
@@ -149,20 +161,41 @@ PCA_model = @load PCA pkg=MultivariateStats
 begin
 
 	pca_model = PCA_model(maxoutdim=2)  # Reducing to 2 principal components
-	pca_mach = machine(pca_model, X)
+	pca_mach = machine(pca_model, X[test, :])
 	MLJ.fit!(pca_mach)
 
 
-	X_pca = MLJ.transform(pca_mach, X)
+	X_pca = MLJ.transform(pca_mach, X[test, :])
 
 	scatter(X_pca[:, 1], 
 		X_pca[:, 2], 
-		group=y, 
+		group=y[test], 
 		legend=:topright, 
 		xlabel="PC1", 
 		ylabel="PC2",
    	 	title="PCA plot of features after Basic Logistic Regression")
 end
+
+# ╔═╡ 950ebb3c-3d25-482b-b35c-0e9bdedf58cc
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
+begin
+	# Restore the model -  testing
+	restored_mach = machine("../../models/Logistic_Classifier_DS2_Hungarian_Model.jls")
+end
+  ╠═╡ =#
+
+# ╔═╡ b55fccfb-8737-4dba-bdb5-43a0eb232482
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
+begin
+	y_pred_bestold = predict_mode(best_model_mach, X[test, :])
+	y_pred_bestnew = predict_mode(restored_mach, X[test, :])
+	y_pred_bestold == y_pred_bestnew
+end
+  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -170,6 +203,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
+JLSO = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
 MLJMultivariateStatsInterface = "1b6a4a23-ba22-4f51-9698-8599985d3728"
@@ -181,6 +215,7 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 DataFrames = "~1.7.0"
 HypothesisTests = "~0.11.3"
+JLSO = "~2.7.0"
 MLJ = "~0.20.7"
 MLJLinearModels = "~0.10.0"
 MLJMultivariateStatsInterface = "~0.5.3"
@@ -194,7 +229,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "61220924fc0eb99de12f9286754a70f283ca31e1"
+project_hash = "fc0e27efa10d26305711a6e4295309610589e140"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -319,6 +354,11 @@ deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
 git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.1.0"
+
+[[deps.BSON]]
+git-tree-sha1 = "4c3e506685c527ac6a54ccc0c8c76fd6f91b42fb"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.9"
 
 [[deps.BangBang]]
 deps = ["Accessors", "ConstructionBase", "InitialValues", "LinearAlgebra", "Requires"]
@@ -948,6 +988,12 @@ git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
 version = "1.6.1"
 
+[[deps.JLSO]]
+deps = ["BSON", "CodecZlib", "FilePathsBase", "Memento", "Pkg", "Serialization"]
+git-tree-sha1 = "7e3821e362ede76f83a39635d177c63595296776"
+uuid = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
+version = "2.7.0"
+
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
@@ -1307,6 +1353,12 @@ version = "2.28.2+1"
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.2"
+
+[[deps.Memento]]
+deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
+git-tree-sha1 = "bb2e8f4d9f400f6e90d57b34860f6abdc51398e5"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.4.1"
 
 [[deps.MicroCollections]]
 deps = ["Accessors", "BangBang", "InitialValues"]
@@ -2359,9 +2411,12 @@ version = "1.4.1+1"
 # ╠═ff3e558c-a1bc-4a27-be3c-7615e5110e13
 # ╠═f054dfc7-a99b-40ad-88ef-ab1501f03ecc
 # ╟─e72c7379-56b3-4e20-8ebf-697952ff8081
-# ╟─1f22734e-8790-48a7-8156-606b4a703499
+# ╠═1f22734e-8790-48a7-8156-606b4a703499
 # ╠═7a5766b9-a1e0-42b0-b371-8a9aba545169
 # ╠═3e44a8cc-1132-4ea7-a361-931395fe3791
 # ╠═75c70dbe-a4da-458b-9bee-d007997858e8
+# ╠═9a8d3e58-be76-4cce-aa11-dffa21910bc9
+# ╠═950ebb3c-3d25-482b-b35c-0e9bdedf58cc
+# ╠═b55fccfb-8737-4dba-bdb5-43a0eb232482
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -92,15 +92,6 @@ begin
 	y_pred_best = predict_mode(best_model_mach, X[test, :])
 end
 
-# ╔═╡ 83226fd9-8274-436c-b169-9b196d3a3d3d
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	using JLSO
-	MLJ.save("../../models/Logistic_Classifier_DS1_Model.jls", best_model_mach)
-end
-  ╠═╡ =#
-
 # ╔═╡ eb4a9547-b2dd-4391-8309-672ab33dedcd
 md"""
 # Performance Evaluation of Best Model
@@ -164,23 +155,34 @@ PCA_model = @load PCA pkg=MultivariateStats
 begin
 
 	pca_model = PCA_model(maxoutdim=2)  # Reducing to 2 principal components
-	pca_mach = machine(pca_model, X)
+	pca_mach = machine(pca_model, X[test, :])
 	MLJ.fit!(pca_mach)
 
 
-	X_pca = MLJ.transform(pca_mach, X)
+	X_pca = MLJ.transform(pca_mach, X[test, :])
 
 	scatter(X_pca[:, 1], 
 		X_pca[:, 2], 
-		group=y, 
+		group=y[test], 
 		legend=:topright, 
 		xlabel="PC1", 
 		ylabel="PC2",
    	 	title="PCA plot of features after Basic Logistic Regression")
 end
 
+# ╔═╡ 83226fd9-8274-436c-b169-9b196d3a3d3d
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
+begin
+	using JLSO
+	MLJ.save("../../models/Logistic_Classifier_DS1_Model.jls", best_model_mach)
+end
+  ╠═╡ =#
+
 # ╔═╡ a314e13e-ae44-4575-bed2-60839126509a
 # ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
 #=╠═╡
 begin
 	# Restore the model -  testing
@@ -190,6 +192,7 @@ end
 
 # ╔═╡ 85006dcc-f2fe-4b87-8d64-d0a51b00dfec
 # ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
 #=╠═╡
 begin
 	y_pred_bestold = predict_mode(best_model_mach, X[test, :])
