@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 1e4c28f0-8a4c-11ef-04ab-870b23181d95
-using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface, MLJMultivariateStatsInterface, MLJXGBoostInterface , MLJBase
+using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface, MLJMultivariateStatsInterface, MLJXGBoostInterface 
 
 # ╔═╡ 637469c7-8376-4afd-8ad2-03c905427d27
 include("../../src/data_clean.jl")
@@ -74,7 +74,6 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
-MLJBase = "a7f614a8-145f-11e9-1d2a-a57a1082229d"
 MLJDecisionTreeInterface = "c6f25543-311c-4c74-83dc-3ea6d1015661"
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
 MLJModels = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
@@ -93,7 +92,6 @@ DataFrames = "~1.7.0"
 DecisionTree = "~0.12.4"
 HypothesisTests = "~0.11.3"
 MLJ = "~0.19.5"
-MLJBase = "~0.21.14"
 MLJDecisionTreeInterface = "~0.4.2"
 MLJLinearModels = "~0.9.2"
 MLJModels = "~0.16.17"
@@ -110,7 +108,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.0"
 manifest_format = "2.0"
-project_hash = "a60df9770421b0313fb5232a6089800b2a8b651e"
+project_hash = "dcdfc889242eea0a4056301f0d528b9936e2f9cd"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
