@@ -31,21 +31,20 @@ begin
 	df_hung = CSV.read("data/DS2_imputed/imputed.processed.hungarian.csv", DataFrame) 
 
 	df_all = CSV.read("data/DS2_imputed/combined_datasets.csv", DataFrame) 
+end
 
+# ╔═╡ b95ef578-11b3-48f5-ad3d-f8a29262f588
+# *** Prepare all Logistic Regression stuff ***
+begin
 
-	# Create a dictionary to df to filename
+	#---- Select Model/file stuff ---
+	
 	# Create a dictionary to map names to DataFrames
 	files_dict = Dict(
     	"DS1 Heart Dataset - heart.csv" => df_ds1,
     	"DS2 Imputed Hungarian Dataset - imputed.processed.hungarian.csv" => df_hung,
     	"Combined Datasets - combined_datasets.csv" => df_all
 	)
-
-end
-
-# ╔═╡ b95ef578-11b3-48f5-ad3d-f8a29262f588
-# Load up models
-begin
 
 	# Model trained on DS1
 	lg_ds1_mach = machine("models/Logistic_Classifier_DS1_Model.jls")
@@ -59,38 +58,21 @@ begin
     	"Model trained on Hungarian DS2" => lg_hungarian_mach
 	)
 
+	# Bind to names var
+	machine_name = @bind selected_machine_name Select(collect(keys(machine_dict)))
+	file_name = @bind selected_file_name Select(collect(keys(files_dict)))
 
-end
+	log_df = files_dict[selected_file_name]
+	log_mach = machine_dict[selected_machine_name]
 
-# ╔═╡ d1a09c15-3d41-4313-823b-76c4f39473d8
-machine_name = @bind selected_machine_name Select(collect(keys(machine_dict)))
+	
+	# ---- Machine ----
+	X, y = coerce_features_and_target_to_scitypes(log_df)
+	y_prob = predict(log_mach, X)  # Probabilities generated
+	y_pred = predict_mode(log_mach, X) # Predictions/classes 
 
-# ╔═╡ c0a5ec18-e9fe-4f25-b4ce-092470c3d197
-file_name = @bind selected_file_name Select(collect(keys(files_dict)))
-
-# ╔═╡ 76f27e4b-198a-4f07-b4da-1e3857c2e7ea
-begin
-	df = files_dict[selected_file_name]
-	mach = machine_dict[selected_machine_name]
-end
-
-# ╔═╡ 7c780262-31c1-4176-8ecc-a9abf9ca0bc4
-# Running the Logistic Regression Machine
-begin
-
-	# function run_model(df, mach) 
-	X, y = coerce_features_and_target_to_scitypes(df)
-
-	# Probabilities generated
-	y_prob = predict(mach, X)
-
-	# Predictions/classes 
-	y_pred = predict_mode(mach, X)
-end
-
-# ╔═╡ 64d2a229-dad0-4092-bd48-bd5db34e06c7
-# Extract metric for later use
-begin 
+	
+	# ---- Confusion Matrix -----
 	cm = ConfusionMatrix()(y_pred, y)
 
 	matrix_values = ConfusionMatrices.matrix(cm)
@@ -100,13 +82,13 @@ begin
 	FP = matrix_values[2, 1]  # False Positives
 	TN = matrix_values[2, 2]  # True Negatives
 	FN = matrix_values[1, 2]  # False Negatives
-	
+
+	# --- Stats ----
 	accuracy = "$(round(MLJ.accuracy(y_pred, y), sigdigits=4))"
 	auc = "$(round(MLJ.auc(y_prob, y), sigdigits=4))"
-end
 
-# ╔═╡ 252f0baf-af32-4296-bf11-153aed4b069b
-begin
+
+	# ---- Plotting -----
 	fprs, tprs, thresholds = roc_curve(y_prob, y)
 
 	roc_plot = plot(fprs, tprs, 
@@ -114,7 +96,7 @@ begin
 		xlabel="False Positive Rate", 
 		ylabel="True Positive Rate"
 	)
-
+	
 end
 
 # ╔═╡ 9cc84512-c258-48d4-975c-1359380d497b
@@ -2275,12 +2257,6 @@ version = "1.4.1+1"
 # ╠═be908d77-a866-49f7-9fa2-3311d005fa86
 # ╠═3b9392a8-da97-4417-8fc5-6c4eb8c1f090
 # ╠═b95ef578-11b3-48f5-ad3d-f8a29262f588
-# ╠═d1a09c15-3d41-4313-823b-76c4f39473d8
-# ╠═c0a5ec18-e9fe-4f25-b4ce-092470c3d197
-# ╠═76f27e4b-198a-4f07-b4da-1e3857c2e7ea
-# ╠═7c780262-31c1-4176-8ecc-a9abf9ca0bc4
-# ╠═64d2a229-dad0-4092-bd48-bd5db34e06c7
-# ╠═252f0baf-af32-4296-bf11-153aed4b069b
 # ╠═9cc84512-c258-48d4-975c-1359380d497b
 # ╠═9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
 # ╠═cdc8655f-cb7e-4ecb-bac7-a8cab8a85748
