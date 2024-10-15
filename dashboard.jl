@@ -15,7 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 1eaa54c5-c260-4109-af80-730de1c9e644
-using DataFrames, CSV, JLSO, MLJ, MLJLinearModels, Plots, PlutoUI, HypertextLiteral
+using DataFrames, CSV, JLSO, MLJ, MLJLinearModels, Plots, PlutoUI, HypertextLiteral, PrettyTables
 
 # ╔═╡ be908d77-a866-49f7-9fa2-3311d005fa86
 using  PlutoUI.ExperimentalLayout: hbox, vbox
@@ -23,49 +23,43 @@ using  PlutoUI.ExperimentalLayout: hbox, vbox
 # ╔═╡ 3b9392a8-da97-4417-8fc5-6c4eb8c1f090
 begin
 
-	include("../../src/data_clean.jl")
+	include("src/data_clean.jl")
 	# Load datasets
 
-	df_ds1 = CSV.read("../../data/DS1/heart.csv", DataFrame) 
+	df_ds1 = CSV.read("data/DS1/heart.csv", DataFrame) 
 	
-	df_hung = CSV.read("../../data/DS2_imputed/imputed.processed.hungarian.csv", DataFrame) 
+	df_hung = CSV.read("data/DS2_imputed/imputed.processed.hungarian.csv", DataFrame) 
 
-	df_all = CSV.read("../../data/DS2_imputed/combined_datasets.csv", DataFrame) 
+	df_all = CSV.read("data/DS2_imputed/combined_datasets.csv", DataFrame) 
 
 
 	# Create a dictionary to df to filename
 	# Create a dictionary to map names to DataFrames
 	files_dict = Dict(
-    	"DS1 Heart Dataset" => df_ds1,
-    	"DS2 Imputed Hungarian Dataset" => df_hung,
-    	"Combined Datasets" => df_all
+    	"DS1 Heart Dataset - heart.csv" => df_ds1,
+    	"DS2 Imputed Hungarian Dataset - imputed.processed.hungarian.csv" => df_hung,
+    	"Combined Datasets - combined_datasets.csv" => df_all
 	)
 
 end
-
-# ╔═╡ 8ccfb78a-1c74-4bfa-92d7-c11535511991
-title = md"""
-# Compare Logistic Regression Model Performance Across Datasets
-"""
 
 # ╔═╡ b95ef578-11b3-48f5-ad3d-f8a29262f588
 # Load up models
 begin
 
 	# Model trained on DS1
-	lg_ds1_mach = machine("../../models/Logistic_Classifier_DS1_Model.jls")
+	lg_ds1_mach = machine("models/Logistic_Classifier_DS1_Model.jls")
 
 	# Model trained on DS2 imputed Hungarian dataset
-	lg_hungarian_mach = machine("../../models/Logistic_Classifier_DS2_Hungarian_Model.jls")
+	lg_hungarian_mach = machine("models/Logistic_Classifier_DS2_Hungarian_Model.jls")
 
 	# Create a dictionary to map names to models
 	machine_dict = Dict(
-    	"Model DS1" => lg_ds1_mach,
-    	"Model Hungarian DS2" => lg_hungarian_mach
+    	"Model trained on DS1" => lg_ds1_mach,
+    	"Model trained on Hungarian DS2" => lg_hungarian_mach
 	)
 
-	
-	
+
 end
 
 # ╔═╡ d1a09c15-3d41-4313-823b-76c4f39473d8
@@ -94,14 +88,21 @@ begin
 	y_pred = predict_mode(mach, X)
 end
 
-# ╔═╡ 3df180b3-0585-44a7-8351-25df303e3937
-round(auc(y_prob, y),sigdigits=4)
-
 # ╔═╡ 64d2a229-dad0-4092-bd48-bd5db34e06c7
+# Extract metric for later use
 begin 
-	confusion_matrix = ConfusionMatrix()(y_pred, y)
-	accuracy = md"""**Model accuracy:** $(round(MLJ.accuracy(y_pred, y),sigdigits=4))"""
-	auc_res = md"""**AUC:** $(round(auc(y_prob, y),sigdigits=4))"""
+	cm = ConfusionMatrix()(y_pred, y)
+
+	matrix_values = ConfusionMatrices.matrix(cm)
+
+	# Extract TP, FP, TN, FN
+	TP = matrix_values[1, 1]  # True Positives
+	FP = matrix_values[2, 1]  # False Positives
+	TN = matrix_values[2, 2]  # True Negatives
+	FN = matrix_values[1, 2]  # False Negatives
+	
+	accuracy = "$(round(MLJ.accuracy(y_pred, y), sigdigits=4))"
+	auc = "$(round(MLJ.auc(y_prob, y), sigdigits=4))"
 end
 
 # ╔═╡ 252f0baf-af32-4296-bf11-153aed4b069b
@@ -111,47 +112,93 @@ begin
 	roc_plot = plot(fprs, tprs, 
 		label="Logistic Classifier", 
 		xlabel="False Positive Rate", 
-		ylabel="True Positive Rate", 
-		title="ROC Curve for $selected_machine_name on $selected_file_name")
+		ylabel="True Positive Rate"
+	)
 
 end
 
-# ╔═╡ 9e63d3be-a04d-4235-bc7c-a6e9aeab3233
-comment = md"""
+# ╔═╡ 9cc84512-c258-48d4-975c-1359380d497b
+# Html here
 
-### Analysis
-- Somethign about AUC blah blah $(round(auc(y_prob, y),sigdigits=4))
-- Something about accuracy blah blah $(round(MLJ.accuracy(y_pred, y),sigdigits=4))
-We think hahaha aha alfajl la la la
+begin
 
-"""
+title_html = @htl("""
+<h1>Compare Logistic Regression Model Performance Across Datasets</h1><br>
+""")
+
+log_model_select_html = @htl("""
+	<h3>Model and Dataset Selection</h3><br>
+	<div style="display: flex; flex-direction: column; gap: 10px;">
+    	<div>
+    <label for="model-select" style="margin-right: 10px;">Select Model:</label>
+        $machine_name
+    </div>
+    <div>
+        <label for="file-select" style="margin-right: 10px;">Select File:</label>
+        $file_name
+    </div>
+</div><br>
+""")
+	
+# Manually create the confusion matrix table in HTML
+log_confusion_matrix_html = @htl("""
+<table border="1">
+  <tr>
+    <th> </th><th>Predicted 0</th><th>Predicted 1</th>
+  </tr>
+  <tr>
+    <td>Actual 0</td><td>$TP</td><td>$FN</td>
+  </tr>
+  <tr>
+    <td>Actual 1</td><td>$FP</td><td>$TN</td>
+  </tr>
+</table>
+""")
+
+# Combine everything into an HTML block
+log_roc_out_html = @htl("""
+<div>
+    <h3>Confusion Matrix</h3>
+    $log_confusion_matrix_html  <!-- Embed the table here -->
+    <ul>
+        <li>Model accuracy: $accuracy</li>
+        <li>AUC: $auc</li>
+    </ul>
+</div><br>
+""")
+	
+# Wrap the plot in some HTML for display
+roc_html = @htl("""
+    <div>
+        <h3>ROC Curve Analysis</h3><br>
+        <p><strong>Selected Model:</strong> $selected_machine_name</p>
+        <p><strong>Selected Dataset:</strong> $selected_file_name</p>
+        <div>
+            $roc_plot
+        </div>
+    </div>
+""")
+
+# Final Layout with all HTML elements combined into one big block
+final_html = @htl("""
+<div style="max-width: 800px; margin: auto;">
+    $title_html
+    $log_model_select_html
+    $log_roc_out_html
+    $roc_html
+</div>
+""")
+
+
+end
 
 # ╔═╡ 9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
+# Export HTML cell
 begin
-	
 	
 	@info PlutoRunner.currently_running_cell_id  # get cellid
 
-	title_layout = hbox([title])
-	
-	# Stack confusion matrix, accuracy, and AUC results vertically
-	metrics_layout = hbox([confusion_matrix, vbox([accuracy, auc_res])])
-
-	control_text_layout = hbox([md""" ### Model and Dataset Selection"""])
-
-	control_layout = hbox([machine_name, file_name])
-
-	# Stack ROC plot, machine name, and file name vertically
-	info_layout = hbox([roc_plot, comment])
-
-	# Combine everything using hbox
-	layout = vbox([
-		title_layout, 
-    	metrics_layout,
-		control_text_layout,
-		control_layout, 
-    	info_layout      # Info on the right  
-	])
+	layout = vbox([final_html])
 end
 
 # ╔═╡ cdc8655f-cb7e-4ecb-bac7-a8cab8a85748
@@ -179,6 +226,7 @@ MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 
 [compat]
 CSV = "~0.10.14"
@@ -189,6 +237,7 @@ MLJ = "~0.20.7"
 MLJLinearModels = "~0.10.0"
 Plots = "~1.40.8"
 PlutoUI = "~0.7.60"
+PrettyTables = "~2.4.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -197,7 +246,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "eec72f985453ed205148c331863bbfee96cbf305"
+project_hash = "8fbd0f0dab3f1f427c9962c0ea99e21cf028583e"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -2224,17 +2273,15 @@ version = "1.4.1+1"
 # ╔═╡ Cell order:
 # ╠═1eaa54c5-c260-4109-af80-730de1c9e644
 # ╠═be908d77-a866-49f7-9fa2-3311d005fa86
-# ╠═8ccfb78a-1c74-4bfa-92d7-c11535511991
 # ╠═3b9392a8-da97-4417-8fc5-6c4eb8c1f090
 # ╠═b95ef578-11b3-48f5-ad3d-f8a29262f588
 # ╠═d1a09c15-3d41-4313-823b-76c4f39473d8
 # ╠═c0a5ec18-e9fe-4f25-b4ce-092470c3d197
 # ╠═76f27e4b-198a-4f07-b4da-1e3857c2e7ea
 # ╠═7c780262-31c1-4176-8ecc-a9abf9ca0bc4
-# ╠═3df180b3-0585-44a7-8351-25df303e3937
 # ╠═64d2a229-dad0-4092-bd48-bd5db34e06c7
 # ╠═252f0baf-af32-4296-bf11-153aed4b069b
-# ╠═9e63d3be-a04d-4235-bc7c-a6e9aeab3233
+# ╠═9cc84512-c258-48d4-975c-1359380d497b
 # ╠═9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
 # ╠═cdc8655f-cb7e-4ecb-bac7-a8cab8a85748
 # ╠═7600a7f7-ecbc-4ac5-be5b-b1c7ece70446
