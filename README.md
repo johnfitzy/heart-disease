@@ -5,10 +5,11 @@
 
 ## Navigation
 
-- `dashboard.js` is the notebook that creates the dashboard as described above. This answers part **Dashboards (5)** from the assignment spec
+- `dashboard.js` is the notebook that creates the dashboard as described above. This answers part **Dashboards (5)** of the assignment spec
+- `report.docx` is the report, this answers part **Report (5)** of the assignment spec
 - `notebooks/` directory contains...notebooks in different sub-folders
-    - `notebooks/eda/` directory contains note books that complete part **Exploratory data analysis (10 marks)** from the assignment spec
-    - `notebooks/imputation/` directory contains notebook `imputation.jl`. This contains experiments and analysis of different imputation techniques. It also applies the final technique and saves the files to `data/`. This answers part **Data imputation (5 marks)** from the assignment spec
-    - `notebooks/modelling/` contains notebooks that train, analyze and export the various algorithms 
+    - `notebooks/eda/` directory contains note books that complete part **Exploratory data analysis (10 marks)** of the assignment spec
+    - `notebooks/imputation/` directory contains notebook `imputation.jl`. This contains experiments and analysis of different imputation techniques. It also applies the final technique and saves the files to `data/`. This answers part **Data imputation (5 marks)** of the assignment spec
+    - `notebooks/modelling/` contains notebooks that train, analyze and export the various algorithms. This answers part **Modelling (10 marks)** of the assignment spec
 - `src/` directory contains common functions used in various notebooks
 - `models/` directory contains exported/saved models that are later used in the `dashboard.jl` and tested on different dataset. 
