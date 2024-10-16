@@ -1,5 +1,7 @@
 # Heart Disease - INFO 411 Assignment Two
 
+## NOTE: julia version 1.11.0 is required to run the dashboard!
+
 ## Dashboard
 - To view go to `http://localhost:1234/edit?id=a1fc6274-8b81-11ef-04cd-f70530cab4ec&isolated_cell_id=9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a`
 
