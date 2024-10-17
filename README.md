@@ -1,6 +1,19 @@
 # Heart Disease - INFO 411 Assignment Two
 
-## NOTE: julia version 1.11.0 is required to run the dashboard!
+## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we have serialized our models and are then loading them back up again for use in the dashboard
+## and Julia broke serialization with a minor version update(!?)
+
+
+## Running Project
+Run these commands in this order:
+```
+cd heart-disease
+julia --pkgimages=no
+import Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+using Pluto;Pluto.run()
+```
 
 ## Dashboard
 - To view go to `http://localhost:1234/edit?id=a1fc6274-8b81-11ef-04cd-f70530cab4ec&isolated_cell_id=9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a`
@@ -16,3 +29,8 @@
 - `data/` directory contains the datasets for the experiments. 
 - `src/` directory contains common functions used in various notebooks
 - `models/` directory contains exported/saved models that are later used in the `dashboard.jl` and tested on different dataset. 
+
+
+Key Points:
+activate . tells Julia to use the environment in the current directory.
+instantiate installs all dependencies listed in the Project.toml and Manifest.toml files, making sure the environment is exactly as intended.
