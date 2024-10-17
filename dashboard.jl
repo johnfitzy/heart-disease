@@ -133,6 +133,19 @@ xgboost_mach_dict = Dict(
 
 end
 
+# ╔═╡ 8ce3e9e2-1c27-4e22-8372-f49c308896d9
+begin
+function calculate_precision(TP, FP)
+    if TP + FP == 0
+        return "Undefined (No positive predictions)"
+    else
+        precision = TP / (TP + FP)
+        return precision
+    end
+end
+metrics = ["Accuracy", "Precision"]
+end
+
 # ╔═╡ 8402081d-85a7-4c2e-acdb-b9a33520b9e7
 md"""
 ## Logistic Regression
@@ -178,9 +191,63 @@ begin
 	lg_TN = lg_matrix_values[2, 2]  # True Negatives
 	lg_FN = lg_matrix_values[1, 2]  # False Negatives
 	
-	lg_accuracy = "$(round(MLJ.accuracy(lg_y_pred, lg_y), sigdigits=4))"
-	lg_auc = "$(round(MLJ.auc(lg_y_prob, lg_y), sigdigits=4))"
+	lg_accuracy = round(MLJ.accuracy(lg_y_pred, lg_y), sigdigits=4)
+	lg_auc = round(MLJ.auc(lg_y_prob, lg_y), sigdigits=4)
+	lg_precision = round(calculate_precision(lg_TP, lg_FP), sigdigits=4)
+
 end
+
+# ╔═╡ ed15e30b-7f33-430a-b418-ccd89d1ed849
+begin
+
+# From https://archive.ics.uci.edu/dataset/45/heart+disease
+lg_accuracy_baseline = 81.579
+lg_precision_baseline = 83.185
+
+lg_data_model = [lg_accuracy * 100, lg_precision * 100]
+lg_data_baseline = [lg_accuracy_baseline, lg_precision_baseline]
+
+lg_dot_plot = scatter(
+    metrics,
+    lg_data_model,
+    markersize = 4,
+    label = "Our Model",
+    xlabel = "Metrics",
+    ylabel = "Scores",
+    legend = :bottom, 
+	color = :red
+)
+
+# Overlay the baseline metrics using scatter!
+scatter!(
+    metrics,
+    lg_data_baseline,
+    markersize = 4,
+    label = "Baseline",
+    color = :green
+)
+
+annotate!(0.6, lg_data_model[1], 
+	text("$(round(lg_data_model[1], digits=2)) %", 10, :red))
+	
+annotate!(0.6, lg_data_baseline[1], 
+	text("$(round(lg_data_baseline[1], digits=2)) %", 10, :green))
+
+
+annotate!(1.4, lg_data_model[2], 
+	text("$(round(lg_data_model[2], digits=2)) %", 10, :red))
+
+annotate!(1.4, lg_data_baseline[2], 
+	text("$(round(lg_data_baseline[2], digits=2)) %", 10, :green))
+
+
+lg_dot_plot
+
+
+end
+
+# ╔═╡ 605c1211-30d4-4c8f-928a-e8816fd42d0a
+lg_data_model
 
 # ╔═╡ 252f0baf-af32-4296-bf11-153aed4b069b
 begin
@@ -239,8 +306,56 @@ rf_FP = rf_matrix_values[2, 1]  # False Positives
 rf_TN = rf_matrix_values[2, 2]  # True Negatives
 rf_FN = rf_matrix_values[1, 2]  # False Negatives
 
-rf_accuracy = "$(round(MLJ.accuracy(rf_y_pred, rf_y), sigdigits=4))"
-rf_auc = "$(round(MLJ.auc(rf_y_prob, rf_y), sigdigits=4))"
+rf_accuracy = round(MLJ.accuracy(rf_y_pred, rf_y), sigdigits=4)
+rf_auc = round(MLJ.auc(rf_y_prob, rf_y), sigdigits=4)
+rf_precision = round(calculate_precision(rf_TP, rf_FP), sigdigits=4)
+
+
+end
+
+# ╔═╡ bb3bd772-7c21-4ce6-8ba0-9d6daf3db6ba
+begin
+rf_accuracy_baseline = 80.263
+rf_precision_baseline = 82.20
+
+rf_data_model = [rf_accuracy * 100, rf_precision * 100]
+rf_data_baseline = [rf_accuracy_baseline, rf_precision_baseline]
+
+rf_dot_plot = scatter(
+    metrics,
+    rf_data_model,
+    markersize = 4,
+    label = "Our Model",
+    xlabel = "Metrics",
+    ylabel = "Scores",
+    legend = :bottom, 
+	color = :red
+)
+
+# Overlay the baseline metrics using scatter!
+scatter!(
+    metrics,
+    rf_data_baseline,
+    markersize = 4,
+    label = "Baseline",
+    color = :green
+)
+
+annotate!(0.6, rf_data_model[1], 
+	text("$(round(rf_data_model[1], digits=2)) %", 10, :red))
+	
+annotate!(0.6, rf_data_baseline[1], 
+	text("$(round(rf_data_baseline[1], digits=2)) %", 10, :green))
+
+
+annotate!(1.4, rf_data_model[2], 
+	text("$(round(rf_data_model[2], digits=2)) %", 10, :red))
+
+annotate!(1.4, rf_data_baseline[2], 
+	text("$(round(rf_data_baseline[2], digits=2)) %", 10, :green))
+
+
+rf_dot_plot
 
 end
 
@@ -302,8 +417,55 @@ xg_FP = xg_matrix_values[2, 1]  # False Positives
 xg_TN = xg_matrix_values[2, 2]  # True Negatives
 xg_FN = xg_matrix_values[1, 2]  # False Negatives
 
-xg_accuracy = "$(round(MLJ.accuracy(xg_y_pred, xg_y), sigdigits=4))"
-xg_auc = "$(round(MLJ.auc(xg_y_prob, xg_y), sigdigits=4))"
+xg_accuracy = round(MLJ.accuracy(xg_y_pred, xg_y), sigdigits=4)
+xg_auc = round(MLJ.auc(xg_y_prob, xg_y), sigdigits=4)
+xg_precision = round(calculate_precision(xg_TP, xg_FP), sigdigits=4)
+
+end
+
+# ╔═╡ 57f9d989-06e7-4dd8-b133-e1fb52071d0a
+begin
+
+xg_accuracy_baseline = 81.679
+xg_precision_baseline = 83.185
+
+xg_data_model = [xg_accuracy * 100, xg_precision * 100]
+xg_data_baseline = [xg_accuracy_baseline, xg_precision_baseline]
+
+xg_dot_plot = scatter(
+    metrics,
+    xg_data_model,
+    markersize = 4,
+    label = "Our Model",
+    xlabel = "Metrics",
+    ylabel = "Scores",
+    legend = :bottom, 
+    color = :red
+)
+
+# Overlay the baseline metrics using scatter!
+scatter!(
+    metrics,
+    xg_data_baseline,
+    markersize = 4,
+    label = "Baseline",
+    color = :green
+)
+
+annotate!(0.6, xg_data_model[1], 
+    text("$(round(xg_data_model[1], digits=2)) %", 10, :red))
+    
+annotate!(0.6, xg_data_baseline[1], 
+    text("$(round(xg_data_baseline[1], digits=2)) %", 10, :green))
+
+annotate!(1.4, xg_data_model[2], 
+    text("$(round(xg_data_model[2], digits=2)) %", 10, :red))
+
+annotate!(1.4, xg_data_baseline[2], 
+    text("$(round(xg_data_baseline[2], digits=2)) %", 10, :green))
+
+xg_dot_plot
+
 end
 
 # ╔═╡ 7596c18a-1133-4057-948f-1f5bae740a12
@@ -322,6 +484,7 @@ end
 # Html here
 
 begin
+
 
 		### --- HTML for Logistic Regression --- ###
 
@@ -367,8 +530,22 @@ lg_roc_out_html = @htl("""
     <ul>
         <li>Model accuracy: $lg_accuracy</li>
         <li>AUC: $lg_auc</li>
+		<li>Precision: $lg_precision</li>
     </ul>
 </div><br>
+""")
+
+lg_dot_plt_html = @htl("""
+    <div>
+         <h3>Our Model Metrics vs Baseline</h3>
+		<p>Baseline source: <a href="https://archive.ics.uci.edu/dataset/45/heart+disease">heart dataset</a>
+		</p>
+        <p><strong>Selected Model:</strong> $lg_selected_mach_name</p>
+        <p><strong>Selected Dataset:</strong> $lg_selected_file_name</p>
+        <div>
+            $lg_dot_plot
+        </div>
+    </div>
 """)
 	
 # Wrap the plot in some HTML for display
@@ -426,9 +603,24 @@ rf_roc_out_html = @htl("""
     <ul>
         <li>Model accuracy: $rf_accuracy</li>
         <li>AUC: $rf_auc</li>
+		<li>Precision: $rf_precision</li>
     </ul>
 </div><br>
 """)
+
+rf_dot_plt_html = @htl("""
+    <div>
+         <h3>Our Model Metrics vs Baseline</h3>
+		<p>Baseline source: <a href="https://archive.ics.uci.edu/dataset/45/heart+disease">heart dataset</a>
+		</p>
+        <p><strong>Selected Model:</strong> $rf_selected_mach_name</p>
+        <p><strong>Selected Dataset:</strong> $rf_selected_file_name</p>
+        <div>
+            $rf_dot_plot
+        </div>
+    </div>
+""")
+
 	
 # Wrap the plot in some HTML for display
 rf_roc_plt_html = @htl("""
@@ -485,9 +677,23 @@ xg_roc_out_html = @htl("""
     <ul>
         <li>Model accuracy: $xg_accuracy</li>
         <li>AUC: $xg_auc</li>
+		<li>Precision: $xg_precision</li>
     </ul>
 </div><br>
 """)
+
+xg_dot_plt_html = @htl("""
+    <div>
+         <h3>Our Model Metrics vs Baseline</h3>
+		<p>Baseline source: <a href="https://archive.ics.uci.edu/dataset/45/heart+disease">heart dataset</a></p>
+        <p><strong>Selected Model:</strong> $xg_selected_mach_name</p>
+        <p><strong>Selected Dataset:</strong> $xg_selected_file_name</p>
+        <div>
+            $xg_dot_plot
+        </div>
+    </div>
+""")
+
 
 # Wrap the plot in some HTML for display
 xg_roc_plt_html = @htl("""
@@ -501,32 +707,22 @@ xg_roc_plt_html = @htl("""
     </div>
 """)
 
-
-# Final Layout with all HTML elements combined into one big block
-# final_html = @htl("""
-# <div style="max-width: 800px; margin: auto;">
-#     $title_html
-#     $lg_model_select_html
-#     $lg_roc_out_html
-#     $lg_roc_html
-# 	$rf_subtitle_html
-# </div>
-# """)
-
-
 	final_html = @htl("""
 <div style="max-width: 800px; margin: auto;">
     $title_html
     $lg_model_select_html
     $lg_roc_out_html
+	$lg_dot_plt_html
     $lg_roc_plt_html
 	$rf_subtitle_html
     $rf_model_select_html
     $rf_roc_out_html
+	$rf_dot_plt_html
     $rf_roc_plt_html
 	$xg_subtitle_html
     $xg_model_select_html
     $xg_roc_out_html
+	$xg_dot_plt_html
     $xg_roc_plt_html
 </div>
 """)
@@ -566,12 +762,15 @@ dash_final_url="http://localhost:1234/edit?" * "id=$notebook&" * join(["isolated
 # ╠═3b9392a8-da97-4417-8fc5-6c4eb8c1f090
 # ╠═b95ef578-11b3-48f5-ad3d-f8a29262f588
 # ╠═e920d7ba-911e-47cd-8457-417eee2ebda0
+# ╠═8ce3e9e2-1c27-4e22-8372-f49c308896d9
 # ╟─8402081d-85a7-4c2e-acdb-b9a33520b9e7
 # ╠═d1a09c15-3d41-4313-823b-76c4f39473d8
 # ╠═c0a5ec18-e9fe-4f25-b4ce-092470c3d197
 # ╠═76f27e4b-198a-4f07-b4da-1e3857c2e7ea
 # ╠═7c780262-31c1-4176-8ecc-a9abf9ca0bc4
 # ╠═64d2a229-dad0-4092-bd48-bd5db34e06c7
+# ╠═ed15e30b-7f33-430a-b418-ccd89d1ed849
+# ╠═605c1211-30d4-4c8f-928a-e8816fd42d0a
 # ╠═252f0baf-af32-4296-bf11-153aed4b069b
 # ╠═8f37976b-4951-4e02-b5e3-f19f8d082c1f
 # ╠═50f5f871-42b3-4bf0-bf01-2382d07a19d1
@@ -579,6 +778,7 @@ dash_final_url="http://localhost:1234/edit?" * "id=$notebook&" * join(["isolated
 # ╠═ba600b4f-d293-420d-8aed-8af2f5a48526
 # ╠═11ff1cc7-12c4-45bb-996a-a368d9750d01
 # ╠═db3eeb77-a0f3-449b-9acb-d1462a84ea29
+# ╠═bb3bd772-7c21-4ce6-8ba0-9d6daf3db6ba
 # ╠═b3839eba-b51e-4cbd-9a3c-864ecd239cd1
 # ╠═047b34f8-abb0-4888-9860-b539f0493cb4
 # ╠═f4bd9cb2-cfcd-4000-831d-5778b2014ffc
@@ -586,6 +786,7 @@ dash_final_url="http://localhost:1234/edit?" * "id=$notebook&" * join(["isolated
 # ╠═bc0293ea-fe57-49a6-8cd7-376bafbd357a
 # ╠═5b501edf-b323-43b4-a02a-0202fc8b3f4d
 # ╠═70c6ee90-1ee8-4dd9-ba95-1d535c674f04
+# ╠═57f9d989-06e7-4dd8-b133-e1fb52071d0a
 # ╠═7596c18a-1133-4057-948f-1f5bae740a12
 # ╠═9cc84512-c258-48d4-975c-1359380d497b
 # ╠═9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
