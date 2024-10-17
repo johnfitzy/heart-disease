@@ -183,7 +183,7 @@ begin
 		legend=false, 
 		xlabel="Features", 
 		ylabel="Percentage Missing", 
-		title="% of data missing in Hungry", 
+		title="% of data missing in Hungary", 
 		orientation=:vertical, 
 		xticks=1:size(missing_df_hung)[1]
 	)
@@ -243,7 +243,7 @@ begin
 		legend=false, 
 		xlabel="Features", 
 		ylabel="Percentage Missing", 
-		title="% of data missing After Imputation - Hungry", 
+		title="% of data missing After Imputation - Hungary", 
 		orientation=:vertical, 
 		xticks=1:size(missing_df_hung_inte)[1]
 	)
