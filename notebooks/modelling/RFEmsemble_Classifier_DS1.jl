@@ -8,9 +8,9 @@ using InteractiveUtils
 begin
 
 using Pkg
-Pkg.activate("../../") 
-	
-using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, Plots, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface 
+Pkg.activate("../../")
+
+using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, Plots, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface
 end
 
 # ╔═╡ 5034f5fc-0328-40b6-aa24-176ad10d6370
@@ -24,7 +24,7 @@ md"""
 - This book runs as follows:
 
 1. Clean and flatten DS1 as per spec.
-2. Initial build of XGBoost Classifier machine
+2. Initial build of Random Forest Classifier machine
 3. Train on partitioned DS1 data
 4. Performance metrics: Log loss, Accuracy, Confusion Metrics, violin plots etc.
 5. Autotune to find best performance hyperparameters
@@ -47,9 +47,6 @@ y = categorical(df.heart_disease)
 X, y = coerce_features_and_target_to_scitypes(df)	
 end
 
-# ╔═╡ 8a2f53ee-1d1a-4572-bab3-87fca748b297
-y
-
 # ╔═╡ fa61bef0-b252-45a2-96d4-1a74c49c1002
 begin
 train, test = partition(1:length(y), 0.7, shuffle=true)
@@ -70,7 +67,7 @@ RandomForestClassifier = @load RandomForestClassifier pkg=DecisionTree
 # ╔═╡ ca1f1fd8-345b-4157-9d6a-96921cb0d06f
 begin
 rfc =RandomForestClassifier()
-forest = EnsembleModel(model=rfc, n=50) #here 
+forest = EnsembleModel(model=rfc, n=50)
 forest.model.n_subfeatures = 5
 end
 
@@ -79,9 +76,6 @@ begin
 mach = machine(forest, X, y, scitype_check_level=0)
 MLJ.fit!(mach, rows=train, verbosity=0)
 end
-
-# ╔═╡ 1ca6c2e8-3fef-4dd4-930d-3a6ad9d3df26
-forest
 
 # ╔═╡ 41dfa78e-7538-4f78-bfb6-10772a1345d4
 md"""
@@ -239,8 +233,7 @@ md"""
 """
 
 # ╔═╡ 6bc31402-4be2-4810-aacd-c3a6fd53d69f
-#autotuning 
-#here the number of forest is set at n=40, with previous autotune.
+#autotuning
 
 @time begin
 	Random.seed!(1)
@@ -248,14 +241,11 @@ md"""
 	rm = range(forest, :(model.max_depth), lower=2, upper=10)
 	rb = range(forest, :bagging_fraction, lower=0.4, upper=1.0)
 	tm = TunedModel(model=forest, tuning=Grid(resolution=10),
-	                resampling=cv, ranges=[rs, rm, rb], n=40,
+	                resampling=cv, ranges=[rs, rm, rb],
 	                measure=log_loss)
 	m = machine(tm, X, y,scitype_check_level=0)
 	MLJ.fit!(m, rows=train, verbosity=0);
 end
-
-# ╔═╡ a5f9f961-6eba-4069-8c32-032952c25378
-tm
 
 # ╔═╡ 15934c79-9379-41e3-94c2-76275779e560
 begin
@@ -271,7 +261,6 @@ begin
 bnsub= rep.best_history_entry.model.model.n_subfeatures
 maxd= rep.best_history_entry.model.model.max_depth
 bbag= rep.best_history_entry.model.bagging_fraction
-numt= rep.best_history_entry.model.n
 logloss= round((rep.best_history_entry.measurement[1]), sigdigits=3)
 end
 
@@ -281,7 +270,6 @@ md""" **Your answer**:
 - subfeatures= $bnsub
 - max depth = $maxd
 - bagging fraction= $bbag
-- number of trees = $numt
 - The corresponding RMS is: $logloss
 """
 
@@ -318,23 +306,17 @@ md"""
 # ╔═╡ 6b9b0b30-d17a-4cd2-9422-65345f4aecc6
 begin
 t_rfc = RandomForestClassifier(n_subfeatures=bnsub, max_depth=maxd)
-forest_t = EnsembleModel(model=t_rfc, n=numt)
+forest_t = EnsembleModel(model=t_rfc, n=200)
 forest_t.bagging_fraction= bbag
 
 t_mach = machine(forest_t, X, y, scitype_check_level=0)
-MLJ.fit!(t_mach, rows=train, verbosity=0)	
+MLJ.fit!(t_mach, rows=train, verbosity=0)
 end
 
-# ╔═╡ f9bec68d-6c03-4974-8f11-db14dcd08869
+# ╔═╡ bcbe83ec-c636-4faf-a018-e3b3096931fe
 begin
 	using JLSO
-	MLJ.save("../../models/RF_Classifier_DS1_Model.jls", t_mach)
-end
-
-# ╔═╡ 7ccfc2b1-6e28-408d-8c37-bfafef624326
-begin
-	# Restore the model -  testing
-	restored_mach = machine("../../models/RF_Classifier_DS1_Model.jls")
+	MLJ.save("../../models/RF_Ensemble_DS1_Model.jls", t_mach)
 end
 
 # ╔═╡ 23a37e56-a44b-4fec-b90b-5db40aa582aa
@@ -413,7 +395,7 @@ MannWhitneyUTest(all_perfT, RFperf)
 md"""
 ## Summary:
 
-- This book contains a tuned model of Random Forest Ensemble Classifier, trained on partitioned (7:3)DS1, tuned and tested. The machine is autotuned in hyperparameters of bagging fraction of $bbag, n_subfeatures of $bnsub, and with the max_depth of $maxd and the number of trees of $numt. 
+- This book contains a tuned model of Random Forest Ensemble Classifier, trained on partitioned (7:3)DS1, tuned and tested. The machine is autotuned in hyperparameters of bagging fraction of $bbag, n_subfeatures of $bnsub, and with the max_depth of $maxd.
 
 - Performance metrics of the tuned model are as follows:
 - mean log_loss: $meanT   (Untuned model: $meanRF) *(Lower is better)*
@@ -422,9 +404,9 @@ md"""
 - AUC: $auc_t (Untuned model: $auc_u)
 
 
-- The T-test and Mann-Whitney test showed that they are not statistically different from one another. The tuned model did not perform statistically better than the untuned model.
+- The T-test and Mann-Whitney test showed that they are not statistically different from one another. The tuned model did not perform staticsally better than the untuned model.
 
-However, the tuned model require slightly less time and resources. 
+Additionally, the tuned model require significant time and resources.
 
 - Untuned model: $Utime seconds. $Ubyte Mb
 - Tuned model: $Ttime seconds. $Tbyte Mb
@@ -453,13 +435,11 @@ display(cm_T) #Tuned Model
 # ╠═5034f5fc-0328-40b6-aa24-176ad10d6370
 # ╠═6f3ecc26-8800-41ee-ad24-d4e6bb9a2ed9
 # ╠═89e80d11-27d9-4461-ba54-9e8468eedeb7
-# ╠═8a2f53ee-1d1a-4572-bab3-87fca748b297
 # ╠═fa61bef0-b252-45a2-96d4-1a74c49c1002
 # ╟─5c9dd70e-5124-45c9-826b-7b97d3b72ca7
 # ╠═b70ab936-f767-49ce-95e4-32e8da8b2686
 # ╠═ca1f1fd8-345b-4157-9d6a-96921cb0d06f
 # ╠═4bee6d6a-7195-4ff9-8a7a-93e8f15d3ea6
-# ╠═1ca6c2e8-3fef-4dd4-930d-3a6ad9d3df26
 # ╟─41dfa78e-7538-4f78-bfb6-10772a1345d4
 # ╠═43d7fa91-1384-4831-a91f-58b03dc251ba
 # ╠═00d8a634-b538-4c94-bf3d-38e5889d51b8
@@ -489,7 +469,6 @@ display(cm_T) #Tuned Model
 # ╟─738b39e7-d429-458c-b843-2de6358046f2
 # ╠═41883cf3-e8f9-4192-9d65-0b3410d96e0b
 # ╠═6bc31402-4be2-4810-aacd-c3a6fd53d69f
-# ╠═a5f9f961-6eba-4069-8c32-032952c25378
 # ╠═15934c79-9379-41e3-94c2-76275779e560
 # ╠═20057c27-6120-4a56-a316-b29dfcb776a4
 # ╠═a22e901e-d71f-47f9-89b3-69c786c977e1
@@ -499,8 +478,7 @@ display(cm_T) #Tuned Model
 # ╠═77e159d5-1f79-4e04-b067-b53eb2583ed7
 # ╠═1d6bb089-6f64-4777-9922-be3ff8a01af8
 # ╠═6b9b0b30-d17a-4cd2-9422-65345f4aecc6
-# ╠═f9bec68d-6c03-4974-8f11-db14dcd08869
-# ╠═7ccfc2b1-6e28-408d-8c37-bfafef624326
+# ╠═bcbe83ec-c636-4faf-a018-e3b3096931fe
 # ╠═23a37e56-a44b-4fec-b90b-5db40aa582aa
 # ╠═b996450c-0407-48ae-982e-782c1fc796da
 # ╠═ca1e599d-b173-478f-9fb7-6ce080f0ee19
