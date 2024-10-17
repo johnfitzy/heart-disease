@@ -1,7 +1,6 @@
 # Heart Disease - INFO 411 Assignment Two
 
-## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we have serialized our models and are then loading them back up again for use in the dashboard
-## and Julia broke serialization with a minor version update(!?)
+## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we have serialized our models and are then loading them back up again for use in the dashboard and Julia broke serialization with a minor version update(!?)
 
 
 ## Running Project
