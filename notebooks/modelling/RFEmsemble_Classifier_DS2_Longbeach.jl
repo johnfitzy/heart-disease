@@ -1,51 +1,129 @@
 ### A Pluto.jl notebook ###
-# v0.19.47
+# v0.20.0
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 1e4c28f0-8a4c-11ef-04ab-870b23181d95
-using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface, MLJMultivariateStatsInterface, MLJXGBoostInterface 
+# ╔═╡ c10fb950-84cd-11ef-2b27-e7f80c61964d
+using DataFrames, Plots, MLJ, MLJModels, HypothesisTests, CSV, Printf, Plots, MLJLinearModels, StatsPlots, Statistics, CategoricalArrays, Random, DecisionTree,MLJDecisionTreeInterface 
 
-# ╔═╡ 637469c7-8376-4afd-8ad2-03c905427d27
+# ╔═╡ 5034f5fc-0328-40b6-aa24-176ad10d6370
 include("../../src/data_clean.jl")
 
-# ╔═╡ 13ad5ad8-ff8b-4475-81bb-15495a3d82b7
-df= CSV.read("../../data/DS2_imputed/combined_datasets.csv", DataFrame)
+# ╔═╡ f75fa5da-cca1-400f-8d2b-0c88c5f20c6e
+md"""
 
-# ╔═╡ 7f0e341e-a57f-41bd-a3b9-b4092b358681
+# Random Forest Classifier Ensemble Model on DS2 Long Beach
+
+- This book runs as follows:
+
+1. Clean and flatten DS2 as per spec.
+2. Initial build of Random Forest Ensemble machine
+3. Train on partitioned DS2 data
+4. Performance metrics: Log loss, Accuracy, Confusion Metrics, violin plots etc.
+5. Autotune to find best performance hyperparameters
+6. Applied new hyperparameters to rebuild a tuned model
+7. Performance metrics on tuned model
+8. T-test/Mann-Whitney Tests between untuned and tuned model
+9. Summary of XGBoost
+"""
+
+# ╔═╡ 6f3ecc26-8800-41ee-ad24-d4e6bb9a2ed9
+df= CSV.read("../../data/DS2_imputed/imputed.processed.long_beach.csv", DataFrame)	
+
+# ╔═╡ 89e80d11-27d9-4461-ba54-9e8468eedeb7
 begin	
 X = DataFrames.select(df, Not(:heart_disease))
 y = categorical(df.heart_disease)
 X, y = coerce_features_and_target_to_scitypes(df)	
 end
 
-# ╔═╡ 18fea5f8-96c3-47d0-a419-9dde383f6da7
-RF_DS1_mach =machine("../../models/RF_Classifier_DS1_Model.jls")
-
-# ╔═╡ a2c65abd-dde1-44de-8a72-7a54260a3d0f
-XG_DS1_mach =machine("../../models/XGBoost_Classifier_DS1_Model.jls")
-
-# ╔═╡ 195f6b62-52b4-43ca-bc7f-de67de308930
-LR_DS1_mach = machine("../../models/Logistic_Classifier_DS1_Model.jls") #somehow i could not get the LR machine to work? -LC
-
-# ╔═╡ b4f0d078-c4b0-47d4-90ea-e7afcf42e49d
-RFtime= @timed begin
-ypredRF= predict_mode(RF_DS1_mach, X)
+# ╔═╡ fa61bef0-b252-45a2-96d4-1a74c49c1002
+begin
+train, test = partition(1:length(y), 0.7, shuffle=true)
+X_train = X[train, :]
+y_train = y[train]
+X_test = X[test, :]
+y_test = y[test]
 end
 
-# ╔═╡ 43c95cc2-2005-4859-a492-cc17186d01ee
-XGtime =@timed begin
-ypredXG= predict_mode(XG_DS1_mach, X)
+# ╔═╡ 958061a3-eaf2-4da5-b60d-bd9fb6d53fb4
+
+
+# ╔═╡ 1639c470-1204-4682-9f1e-df6b66e4e242
+
+
+# ╔═╡ 5c9dd70e-5124-45c9-826b-7b97d3b72ca7
+md"""
+# Random Forest Classifier Ensemble
+"""
+
+# ╔═╡ b70ab936-f767-49ce-95e4-32e8da8b2686
+RandomForestClassifier = @load RandomForestClassifier pkg=DecisionTree
+
+# ╔═╡ ca1f1fd8-345b-4157-9d6a-96921cb0d06f
+begin
+rfc =RandomForestClassifier()
+forest = EnsembleModel(model=rfc, n=200)
+forest.model.n_subfeatures = 5
 end
 
-# ╔═╡ c50c0305-7e74-4bd9-a29b-f5cfd2230dde
-RFa=accuracy(ypredRF,y) #accuracy
+# ╔═╡ 4bee6d6a-7195-4ff9-8a7a-93e8f15d3ea6
+begin
+mach = machine(forest, X, y, scitype_check_level=0)
+MLJ.fit!(mach, rows=train, verbosity=0)
+end
 
-# ╔═╡ a37233f8-8595-4dc8-baa0-e0cadc76df46
-RFcm= ConfusionMatrix()(ypredRF, y) #confusion matrix for RF
+# ╔═╡ 41dfa78e-7538-4f78-bfb6-10772a1345d4
+md"""
+## Performance Evaluation of Untuned Model
 
-# ╔═╡ fd25a3ec-7b07-4698-8e4a-8cb636161c55
+- Accuracy, Confusion Matrix, ROC/AUC, Violin Plot, Learning Curve
+"""
+
+# ╔═╡ 43d7fa91-1384-4831-a91f-58b03dc251ba
+ypred= vcat(predict_mode(mach, X_test)...)
+
+# ╔═╡ 00d8a634-b538-4c94-bf3d-38e5889d51b8
+ypredprob= MLJ.predict(mach, X_test)
+
+# ╔═╡ 5561756d-9b2b-4253-9004-cbcc191c4044
+md"""
+### Accuracy""" 
+
+# ╔═╡ 4991da63-0a38-4f80-832a-dbb3a889a8a1
+accu_U=round(accuracy(ypred, y_test)*100, digits=2)
+
+# ╔═╡ 1b1f1805-7490-406c-84da-94d72da992ef
+begin
+y_pred_1= categorical(ypred, ordered=true)
+y_test_1= categorical(y_test, ordered=true)
+end
+
+# ╔═╡ e799a120-be6e-4226-9c50-a84f7662cf5a
+md"""
+### Confusion Matrix of Untuned Model"""
+
+# ╔═╡ beedb402-eca8-43b4-b021-d3a71683f05b
+cm_U= ConfusionMatrix()(y_pred_1, y_test_1)
+
+# ╔═╡ 08bd5327-4420-4cf0-823c-0d798e72a131
+md"""
+### ROC Curve"""
+
+# ╔═╡ 207227eb-05db-49cd-aec6-31acd0b7a2fd
+begin
+	# Plot ROC 
+	fprs, tprs, thresholds = roc_curve(ypredprob, y_test)
+
+	plot(fprs, tprs, label="RF Classifier Ensemble", legend=:bottomright,xlabel="False Positive Rate", ylabel="True Positive Rate", title="ROC Curve for RF Classifier Ensemble")
+
+end
+
+# ╔═╡ 26652084-e92a-474c-8ebc-f9a9ec0721e9
+auc_u= round(auc(ypredprob, y_test), digits=3)
+
+# ╔═╡ 57523371-064e-4e83-ab7e-bf42cbe60958
 function calculate_precision(cm)
     tp = cm[2, 2]  # True Positives
     fp = cm[1, 2]  # False Positives
@@ -53,17 +131,302 @@ function calculate_precision(cm)
     return precision
 end
 
-# ╔═╡ ebaf09d6-90d5-40fb-8268-221c1196976f
-RFp=round(calculate_precision(RFcm)*100, digits=2) #precision for RF
+# ╔═╡ cf727bb8-aa88-4c7d-96b1-cc5cc02e1409
+md"""
+#### Precision
+"""
 
-# ╔═╡ df81136f-2f9c-4037-9d28-1efa9c0fc3b6
-XGa=accuracy(ypredXG,y) #accuracy for XG
+# ╔═╡ 8dbaa1c5-9658-4aa9-b222-5af661172372
+prec_U=round(calculate_precision(cm_U)*100, digits=2)
 
-# ╔═╡ 048f7e63-0d32-4d07-a7aa-20be6ad609c5
-XGcm= ConfusionMatrix()(ypredXG, y) #confusion matrix for XG
+# ╔═╡ 1292febd-094b-413a-8767-d8b142f57a46
+md"""
+#### Log Loss (Cross Entropy)
+"""
 
-# ╔═╡ d3d409db-27a1-410a-97f6-fa5229fa5e85
-XGp=round(calculate_precision(XGcm)*100, digits=2) #precision for XG
+# ╔═╡ e965bc04-945b-4e05-9465-91670406e5bd
+trtime=@timed begin
+	Random.seed!(1)
+	perf = MLJ.evaluate!(mach, measure=log_loss, resampling=CV(nfolds=10, shuffle=true), check_measure=false, verbosity=0)
+
+end
+
+# ╔═╡ c3d13c29-569c-4938-9c6a-5a538fe57d3a
+RFperf= vcat(vcat(perf.per_fold...)...)
+
+# ╔═╡ 4be1ed23-02e8-4adc-8699-383db459a295
+violin(["RF Classifier Ensemble log loss"], RFperf, label=nothing)
+
+# ╔═╡ 0534d806-4f2f-4db5-b6cf-5ca32f844f83
+md"""
+#### Mean and Std of Log loss"""
+
+# ╔═╡ a0a34df2-0653-4a3b-8f69-aa15a959b4ad
+begin
+meanRF=round(mean(RFperf), sigdigits=4)
+stdRF=round(std(RFperf), sigdigits=4)
+println("mean RF log loss: $(meanRF)")
+println("standard deviation of XG log loss: $(stdRF)")
+end
+
+# ╔═╡ 5772d55b-f25f-4e66-abdc-2340b6189863
+md"""
+##### Learning Curve"""
+
+# ╔═╡ 36f403b0-f576-4868-9b5d-8855bf3e4c90
+begin
+	cv= CV(nfolds=10,shuffle=true)
+	r_n = range(forest, :n, lower=10, upper=200)
+	curve = learning_curve(mach, resampling=cv,
+	                         range=r_n, measure=log_loss);
+end
+
+# ╔═╡ a46ebf53-196d-4043-bd71-32dad9e098c2
+curve
+
+# ╔═╡ 9de2c271-4e4c-4287-8c7f-e9643799db33
+begin
+plotly()
+Plots.plot(curve.parameter_values, curve.measurements, ylabel="log loss", xlabel="# num of trees", label="", title="Num. of Trees vs log loss")
+end
+
+# ╔═╡ 11f4e589-6122-473a-b4df-790abd5eb0c6
+md"""
+Based on the number of trees vs log loss trees, where the lowest log loss number the better, the optimal number of trees would be around 100. """
+
+# ╔═╡ f9479004-8352-4a99-8e55-37e63d56b898
+md"""
+# Summary and Comments on Untuned Random Forest Ensemble Model
+
+## Summary:
+- The untuned model Accuracy is: $accu_U %
+- AUC: $auc_u
+- mean RF log loss: $(meanRF)
+- standard deviation of XG log loss: $(stdRF)
+
+## Comments:
+### Confusion matrix of Untuned Model:
+Using the testing data, 
+- True Positives (TP) (Class 0): $(cm_U.mat[1,1]) instances of predicted class 0 were correctly predicted as class 0.
+- False Positives (FP) (Class 1): $(cm_U.mat[1,2]) instances were incorrectly predicted as class 0 but actually belong to class 1.
+- True Negatives (TN) (Class 1): $(cm_U.mat[2,2]) instances of predicted class 1 were correctly predicted as class 1.
+- False Negatives (FN) (Class 0): $(cm_U.mat[2,1]) instances were incorrectly predicted as class 1 but actually belong to class 0.
+
+### ROC Curve and AUC:
+- The ROC (Receiver Operating Characteristic) curve plots the True Positive Rate (TPR) against the False Positive Rate (FPR) at various threshold settings.
+- A higher ROC curve indicates better performance. The closer the curve is to the top left corner, the better the model is at distinguishing between the classes.
+- The AUC (Area Under the Curve) summarizes the ROC curve performance; a value of 1.0 represents perfect classification, while a value of 0.5 represents random guessing.
+- The AUC is $auc_u, which is very good.
+
+
+"""
+
+# ╔═╡ 738b39e7-d429-458c-b843-2de6358046f2
+cm_U
+
+# ╔═╡ 41883cf3-e8f9-4192-9d65-0b3410d96e0b
+md"""
+# Autotuning the RF Classifier Ensemble
+"""
+
+# ╔═╡ 6bc31402-4be2-4810-aacd-c3a6fd53d69f
+#autotuning 
+
+@time begin
+	Random.seed!(1)
+	rs = range(forest, :(model.n_subfeatures), lower=1, upper=5)
+	rm = range(forest, :(model.max_depth), lower=2, upper=10)
+	rb = range(forest, :bagging_fraction, lower=0.4, upper=1.0)
+	tm = TunedModel(model=forest, tuning=Grid(resolution=10),
+	                resampling=cv, ranges=[rs, rm, rb],
+	                measure=log_loss)
+	m = machine(tm, X, y,scitype_check_level=0)
+	MLJ.fit!(m, rows=train, verbosity=0);
+end
+
+# ╔═╡ 15934c79-9379-41e3-94c2-76275779e560
+begin
+	rep = report(m)
+	rep.best_history_entry.measurement
+end
+
+# ╔═╡ 20057c27-6120-4a56-a316-b29dfcb776a4
+rep
+
+# ╔═╡ a22e901e-d71f-47f9-89b3-69c786c977e1
+begin
+bnsub= rep.best_history_entry.model.model.n_subfeatures
+maxd= rep.best_history_entry.model.model.max_depth
+bbag= rep.best_history_entry.model.bagging_fraction
+logloss= round((rep.best_history_entry.measurement[1]), sigdigits=3)
+end
+
+# ╔═╡ 5640eb69-ac29-4de0-b3e8-5ba504bda87f
+md""" **Your answer**: 
+#### The best setting is: 
+- subfeatures= $bnsub
+- max depth = $maxd
+- bagging fraction= $bbag
+- The corresponding log loss is: $logloss
+"""
+
+# ╔═╡ 5b2b4a34-e4c4-41d4-8720-2afa9480765f
+
+begin
+	res = rep.plotting
+	vals_sf = res.parameter_values[:, 1]
+	vals_df = res.parameter_values[:, 2]
+	vals_bf = res.parameter_values[:, 3]
+end
+
+# ╔═╡ eda5fb91-5669-4a31-bfce-0335842f6df6
+res
+
+# ╔═╡ 77e159d5-1f79-4e04-b067-b53eb2583ed7
+begin
+	plotly()
+	p2= plot(vals_bf, vals_sf, res.measurements, seriestype=:contour, cmap=:hot, fill=true)
+	xlabel!("# of sub-features", fontsize=14)
+	ylabel!("max_depth", fontsize=14)
+	title!("Contour heatmap for best setting")
+	p2
+end
+
+# ╔═╡ 1d6bb089-6f64-4777-9922-be3ff8a01af8
+md""" 
+## Tuned RF Ensemble Model with tuned hyperparameters
+- including performance metrics: Accuracy, Confusion Matrix, ROC/AUC, Violin Plot
+- T-test and Mann-Whitney test
+
+"""
+
+# ╔═╡ 6b9b0b30-d17a-4cd2-9422-65345f4aecc6
+begin
+t_rfc = RandomForestClassifier(n_subfeatures=bnsub, max_depth=maxd)
+forest_t = EnsembleModel(model=t_rfc, n=200)
+forest_t.bagging_fraction= bbag
+
+t_mach = machine(forest_t, X, y, scitype_check_level=0)
+MLJ.fit!(t_mach, rows=train, verbosity=0)
+end
+
+# ╔═╡ 679c5217-0270-4630-bfe1-6cd556945deb
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	using JLSO
+	MLJ.save("../../models/RF_Ensemble_DS2_Longbeach_Model.jls", t_mach)
+end
+  ╠═╡ =#
+
+# ╔═╡ 23a37e56-a44b-4fec-b90b-5db40aa582aa
+tutime=@timed begin
+	Random.seed!(1)
+	t_perf = MLJ.evaluate!(t_mach, measure=log_loss, resampling=CV(nfolds=10, shuffle=true), check_measure=false, verbosity=0)
+
+end
+
+# ╔═╡ b996450c-0407-48ae-982e-782c1fc796da
+begin
+Utime, Ubyte= round((trtime.time), sigdigits=4), round((trtime.bytes/1000000), sigdigits=4)
+Ttime, Tbyte= round((tutime.time), sigdigits=4), round((tutime.bytes/1000000), sigdigits=4)
+end
+
+# ╔═╡ ca1e599d-b173-478f-9fb7-6ce080f0ee19
+begin
+all_perfT=vcat(vcat(tutime.value.per_fold...)...)
+stdT= round(std(all_perfT), digits=4)
+meanT= round(mean(all_perfT), sigdigits=4)
+end
+
+# ╔═╡ 586e952a-e3f0-46b9-b239-8d1d7a785835
+ypredT= predict_mode(t_mach, X_test)
+
+# ╔═╡ 01eb6f8d-2787-47ff-b6c8-ccc4e7ebd3e4
+ypredTprob= MLJ.predict(t_mach, X_test)
+
+# ╔═╡ 1c99b55f-d6b4-45af-bdd4-468423f33c8d
+y_test
+
+# ╔═╡ a19d0448-baee-4a28-8f9f-3c20028e62d0
+accu_T=round(accuracy(ypredT, y_test)*100, digits=2)
+
+# ╔═╡ 7baae015-6314-4ee2-b716-cc24273a7c39
+begin
+y_pred_o= categorical(ypredT, ordered=true)
+y_test_o= categorical(y_test, ordered=true)
+end
+
+# ╔═╡ 9e9f39b8-2202-46ff-bab7-666f803caf7f
+cm_T= ConfusionMatrix()(y_pred_o, y_test_o)
+
+# ╔═╡ 1cd26f66-cbf9-4006-8ae6-4851adb8c08d
+begin
+	# Plot ROC 
+	fprsT, tprsT, thresholdsT = roc_curve(ypredTprob, y_test)
+
+	plot(fprsT, tprsT, label="XGBoost Classifier", xlabel="False Positive Rate", ylabel="True Positive Rate", legend=:bottomright,title="ROC Curve for Tuned XGBoost Classifier")
+
+end
+
+# ╔═╡ 7a48a728-9bad-4838-93a4-7c7ecedf4521
+auc_t= round(auc(ypredTprob, y_test), digits=3)
+
+# ╔═╡ f47372b8-d515-4f65-93e6-7a8eaa5d5902
+md"""
+### Comparing untune and tuned model
+- violin plots side by side
+- T-test 
+- Mann-Whitney Test"""
+
+# ╔═╡ c5521565-8e7a-4204-896c-cefb9685eb7d
+begin
+    violin(["Untuned Vs Tuned XGBoost Classifier"], RFperf, side=:left, label="Untuned")
+    violin!(["Untuned Vs Tuned XGBoost Classifier"], all_perfT, side=:right, label="Tuned",title="Log loss Untuned Vs Tuned side-by-side")
+end
+
+# ╔═╡ 7853c94f-60ff-4e09-98ad-8e6468c73cf0
+UnequalVarianceTTest(RFperf, all_perfT)
+
+# ╔═╡ cae4dfc3-0b1c-4cd2-94d9-02dc1fe73553
+MannWhitneyUTest(all_perfT, RFperf)
+
+# ╔═╡ 0f241ad4-7b04-4999-bd01-d67898d474d4
+md"""
+## Summary:
+
+- This book contains a tuned model of Random Forest Ensemble Classifier, trained on partitioned (7:3)DS1, tuned and tested. The machine is autotuned in hyperparameters of bagging fraction of $bbag, n_subfeatures of $bnsub, and with the max_depth of $maxd. 
+
+- Performance metrics of the tuned model are as follows:
+- mean log_loss: $meanT   (Untuned model: $meanRF) *(Lower is better)*
+- standard dev: $stdT (Untuned model: $stdRF)
+- Accuracy: $accu_T %  (Untuned model: $accu_U %)
+- AUC: $auc_t (Untuned model: $auc_u)
+
+
+- The T-test and Mann-Whitney test showed that they are not statistically different from one another. The tuned model did not perform staticsally better than the untuned model.
+
+Additionally, the tuned model require significant time and resources. 
+
+- Untuned model: $Utime seconds. $Ubyte Mb
+- Tuned model: $Ttime seconds. $Tbyte Mb
+
+
+"""
+
+
+
+# ╔═╡ eec3e5b2-ec1c-45c2-b84f-6fd56fe6f73c
+md"""
+### Comments on Confusion Matrix:
+As you can see below, there is improvement in the testing dataset:
+"""
+
+# ╔═╡ f990ad86-7ad9-4f19-beb3-7fed28765166
+display(cm_U) #Untuned Model
+
+# ╔═╡ b004f4d1-c28c-4df5-941f-e66d190fb37e
+display(cm_T) #Tuned Model
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -73,12 +436,11 @@ CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DecisionTree = "7806a523-6efd-50cb-b5f6-3fa6f1930dbb"
 HypothesisTests = "09f84164-cd44-5f33-b23f-e6b0d136a0d5"
+JLSO = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
 MLJ = "add582a8-e3ab-11e8-2d5e-e98b27df1bc7"
 MLJDecisionTreeInterface = "c6f25543-311c-4c74-83dc-3ea6d1015661"
 MLJLinearModels = "6ee0df7b-362f-4a72-a706-9e79364fb692"
 MLJModels = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
-MLJMultivariateStatsInterface = "1b6a4a23-ba22-4f51-9698-8599985d3728"
-MLJXGBoostInterface = "54119dfa-1dab-4055-a167-80440f4f7a91"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -89,16 +451,14 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 CSV = "~0.10.14"
 CategoricalArrays = "~0.10.8"
 DataFrames = "~1.7.0"
-DecisionTree = "~0.12.4"
-HypothesisTests = "~0.11.3"
+DecisionTree = "~0.12.3"
+HypothesisTests = "~0.11.2"
+JLSO = "~2.7.0"
 MLJ = "~0.19.5"
-MLJDecisionTreeInterface = "~0.4.2"
+MLJDecisionTreeInterface = "~0.4.0"
 MLJLinearModels = "~0.9.2"
-MLJModels = "~0.16.17"
-MLJMultivariateStatsInterface = "~0.5.3"
-MLJXGBoostInterface = "~0.3.11"
+MLJModels = "~0.16.10"
 Plots = "~1.40.8"
-Statistics = "~1.11.1"
 StatsPlots = "~0.15.7"
 """
 
@@ -106,9 +466,9 @@ StatsPlots = "~0.15.7"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.0"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "dcdfc889242eea0a4056301f0d528b9936e2f9cd"
+project_hash = "424d50e64588af4123c1b9af18fa8de12be968d1"
 
 [[deps.ARFFFiles]]
 deps = ["CategoricalArrays", "Dates", "Parsers", "Tables"]
@@ -175,7 +535,7 @@ version = "1.1.3"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.2"
+version = "1.1.1"
 
 [[deps.Arpack]]
 deps = ["Arpack_jll", "Libdl", "LinearAlgebra", "Logging"]
@@ -221,7 +581,6 @@ version = "7.16.0"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
-version = "1.11.0"
 
 [[deps.AxisAlgorithms]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
@@ -229,9 +588,13 @@ git-tree-sha1 = "01b8ccb13d68535d73d2b0c23e39bd23155fb712"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.1.0"
 
+[[deps.BSON]]
+git-tree-sha1 = "4c3e506685c527ac6a54ccc0c8c76fd6f91b42fb"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.9"
+
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-version = "1.11.0"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -244,28 +607,11 @@ git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.8+1"
 
-[[deps.CEnum]]
-git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
-uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-version = "0.5.0"
-
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
 git-tree-sha1 = "6c834533dc1fabd820c1db03c839bf97e45a3fab"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 version = "0.10.14"
-
-[[deps.CUDA_Driver_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "ccd1e54610c222fadfd4737dac66bff786f63656"
-uuid = "4ee394cb-3365-5eb0-8335-949819d2adfc"
-version = "0.10.3+0"
-
-[[deps.CUDA_Runtime_jll]]
-deps = ["Artifacts", "CUDA_Driver_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "e43727b237b2879a34391eeb81887699a26f8f2f"
-uuid = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
-version = "0.15.3+0"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -278,13 +624,18 @@ deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Un
 git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
 uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 version = "0.10.8"
-weakdeps = ["JSON", "RecipesBase", "SentinelArrays", "StructTypes"]
 
     [deps.CategoricalArrays.extensions]
     CategoricalArraysJSONExt = "JSON"
     CategoricalArraysRecipesBaseExt = "RecipesBase"
     CategoricalArraysSentinelArraysExt = "SentinelArrays"
     CategoricalArraysStructTypesExt = "StructTypes"
+
+    [deps.CategoricalArrays.weakdeps]
+    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 
 [[deps.CategoricalDistributions]]
 deps = ["CategoricalArrays", "Distributions", "Missings", "OrderedCollections", "Random", "ScientificTypes"]
@@ -449,7 +800,6 @@ version = "1.0.0"
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
-version = "1.11.0"
 
 [[deps.Dbus_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl"]
@@ -495,7 +845,6 @@ weakdeps = ["ChainRulesCore", "SparseArrays"]
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
-version = "1.11.0"
 
 [[deps.Distributions]]
 deps = ["AliasTables", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns"]
@@ -585,7 +934,6 @@ weakdeps = ["Mmap", "Test"]
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
-version = "1.11.0"
 
 [[deps.FillArrays]]
 deps = ["LinearAlgebra"]
@@ -659,7 +1007,6 @@ version = "1.0.14+0"
 [[deps.Future]]
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
-version = "1.11.0"
 
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
@@ -669,15 +1016,15 @@ version = "3.4.0+1"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
-git-tree-sha1 = "629693584cef594c3f6f99e76e7a7ad17e60e8d5"
+git-tree-sha1 = "ee28ddcd5517d54e417182fec3886e7412d3926f"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.73.7"
+version = "0.73.8"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "FreeType2_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt6Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "a8863b69c2a0859f2c2c87ebdc4c6712e88bdf0d"
+git-tree-sha1 = "f31929b9e67066bee48eec8b03c0df47d31a74b3"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.73.7+0"
+version = "0.73.8+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -748,7 +1095,6 @@ version = "2024.2.1+0"
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-version = "1.11.0"
 
 [[deps.Interpolations]]
 deps = ["Adapt", "AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "Requires", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
@@ -809,23 +1155,17 @@ git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
 version = "1.6.1"
 
+[[deps.JLSO]]
+deps = ["BSON", "CodecZlib", "FilePathsBase", "Memento", "Pkg", "Serialization"]
+git-tree-sha1 = "7e3821e362ede76f83a39635d177c63595296776"
+uuid = "9da8a3cd-07a3-59c0-a743-3fdc52c30d11"
+version = "2.7.0"
+
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.4"
-
-[[deps.JSON3]]
-deps = ["Dates", "Mmap", "Parsers", "PrecompileTools", "StructTypes", "UUIDs"]
-git-tree-sha1 = "eb3edce0ed4fa32f75a0a11217433c31d56bd48b"
-uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-version = "1.14.0"
-
-    [deps.JSON3.extensions]
-    JSON3ArrowExt = ["ArrowTypes"]
-
-    [deps.JSON3.weakdeps]
-    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
 
 [[deps.JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -846,10 +1186,10 @@ uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.2+0"
 
 [[deps.LERC_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "36bdbc52f13a7d1dcb0f3cd694e01677a515655b"
 uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
-version = "3.0.0+1"
+version = "4.0.0+0"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -893,7 +1233,6 @@ version = "1.9.0"
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
 uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
-version = "1.11.0"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -903,17 +1242,16 @@ version = "0.6.4"
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "8.6.0+0"
+version = "8.4.0+0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
-version = "1.11.0"
 
 [[deps.LibGit2_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
 uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
-version = "1.7.2+0"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
@@ -922,7 +1260,6 @@ version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-version = "1.11.0"
 
 [[deps.Libffi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -962,9 +1299,9 @@ version = "2.40.1+0"
 
 [[deps.Libtiff_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "2da088d113af58221c52828a80378e16be7d037a"
+git-tree-sha1 = "b404131d06f7886402758c9ce2214b636eb4d54a"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.5.1+1"
+version = "4.7.0+0"
 
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -981,7 +1318,6 @@ version = "7.3.0"
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-version = "1.11.0"
 
 [[deps.LinearMaps]]
 deps = ["LinearAlgebra"]
@@ -1013,7 +1349,6 @@ version = "0.3.28"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-version = "1.11.0"
 
 [[deps.LoggingExtras]]
 deps = ["Dates", "Logging"]
@@ -1097,23 +1432,11 @@ git-tree-sha1 = "410da88e0e6ece5467293d2c76b51b7c6df7d072"
 uuid = "d491faf4-2d78-11e9-2867-c94bc002c0b7"
 version = "0.16.17"
 
-[[deps.MLJMultivariateStatsInterface]]
-deps = ["CategoricalDistributions", "Distances", "LinearAlgebra", "MLJModelInterface", "MultivariateStats", "StatsBase"]
-git-tree-sha1 = "0d76e36bf83926235dcd3eaeafa7f47d3e7f32ea"
-uuid = "1b6a4a23-ba22-4f51-9698-8599985d3728"
-version = "0.5.3"
-
 [[deps.MLJTuning]]
 deps = ["ComputationalResources", "Distributed", "Distributions", "LatinHypercubeSampling", "MLJBase", "ProgressMeter", "Random", "RecipesBase"]
 git-tree-sha1 = "02688098bd77827b64ed8ad747c14f715f98cfc4"
 uuid = "03970b2e-30c4-11ea-3135-d1576263f10f"
 version = "0.7.4"
-
-[[deps.MLJXGBoostInterface]]
-deps = ["MLJModelInterface", "SparseArrays", "Tables", "XGBoost"]
-git-tree-sha1 = "25769259346a017d227c2134347db4c449d43625"
-uuid = "54119dfa-1dab-4055-a167-80440f4f7a91"
-version = "0.3.11"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -1124,7 +1447,6 @@ version = "0.5.13"
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
-version = "1.11.0"
 
 [[deps.MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "NetworkOptions", "Random", "Sockets"]
@@ -1135,12 +1457,18 @@ version = "1.1.9"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.6+0"
+version = "2.28.2+1"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.2"
+
+[[deps.Memento]]
+deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
+git-tree-sha1 = "bb2e8f4d9f400f6e90d57b34860f6abdc51398e5"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.4.1"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1150,11 +1478,10 @@ version = "1.2.0"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
-version = "1.11.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2023.12.12"
+version = "2023.1.10"
 
 [[deps.MultivariateStats]]
 deps = ["Arpack", "Distributions", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
@@ -1207,7 +1534,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.27+1"
+version = "0.3.23+4"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1302,13 +1629,9 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.43.4+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.11.0"
-weakdeps = ["REPL"]
-
-    [deps.Pkg.extensions]
-    REPLExt = "REPL"
+version = "1.10.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -1380,7 +1703,6 @@ version = "2.4.0"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-version = "1.11.0"
 
 [[deps.ProgressMeter]]
 deps = ["Distributed", "Printf"]
@@ -1430,14 +1752,12 @@ version = "2.11.1"
     Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 
 [[deps.REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]
+deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
-version = "1.11.0"
 
 [[deps.Random]]
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-version = "1.11.0"
 
 [[deps.Ratios]]
 deps = ["Requires"]
@@ -1545,7 +1865,6 @@ version = "1.4.5"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-version = "1.11.0"
 
 [[deps.Setfield]]
 deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
@@ -1556,7 +1875,6 @@ version = "1.1.1"
 [[deps.SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
-version = "1.11.0"
 
 [[deps.ShowCases]]
 git-tree-sha1 = "7f534ad62ab2bd48591bdeac81994ea8c445e4a5"
@@ -1576,7 +1894,6 @@ version = "1.2.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
-version = "1.11.0"
 
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
@@ -1587,13 +1904,7 @@ version = "1.2.1"
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-version = "1.11.0"
-
-[[deps.SparseMatricesCSR]]
-deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "38677ca58e80b5cad2382e5a1848f93b054ad28d"
-uuid = "a0a7dd2c-ebf4-11e9-1f05-cf50bc540ca1"
-version = "0.6.7"
+version = "1.10.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
@@ -1634,14 +1945,9 @@ uuid = "64bff920-2084-43da-a3e6-9bb72801c0c9"
 version = "3.4.0"
 
 [[deps.Statistics]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
+deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.11.1"
-weakdeps = ["SparseArrays"]
-
-    [deps.Statistics.extensions]
-    SparseArraysExt = ["SparseArrays"]
+version = "1.10.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1678,16 +1984,6 @@ git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
 uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
 version = "0.4.0"
 
-[[deps.StructTypes]]
-deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "159331b30e94d7b11379037feeb9b690950cace8"
-uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-version = "1.11.0"
-
-[[deps.StyledStrings]]
-uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
-version = "1.11.0"
-
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
@@ -1695,7 +1991,7 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "7.7.0+0"
+version = "7.2.1+1"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1734,7 +2030,6 @@ version = "0.1.1"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-version = "1.11.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
@@ -1749,7 +2044,6 @@ version = "1.5.1"
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
-version = "1.11.0"
 
 [[deps.UnPack]]
 git-tree-sha1 = "387c1f73762231e86e0c9c5443ce3b4a0a9a0c2b"
@@ -1758,7 +2052,6 @@ version = "1.0.2"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
-version = "1.11.0"
 
 [[deps.UnicodeFun]]
 deps = ["REPL"]
@@ -1828,26 +2121,6 @@ version = "1.0.0"
 git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
 uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
 version = "1.6.1"
-
-[[deps.XGBoost]]
-deps = ["AbstractTrees", "CEnum", "JSON3", "LinearAlgebra", "OrderedCollections", "SparseArrays", "SparseMatricesCSR", "Statistics", "Tables", "XGBoost_jll"]
-git-tree-sha1 = "bacb62e07d104630094c8dac2fd070f5d4b9b305"
-uuid = "009559a3-9522-5dbb-924b-0b6ed2b22bb9"
-version = "2.5.1"
-
-    [deps.XGBoost.extensions]
-    XGBoostCUDAExt = "CUDA"
-    XGBoostTermExt = "Term"
-
-    [deps.XGBoost.weakdeps]
-    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-    Term = "22787eb5-b846-44ae-b979-8e399b8463ab"
-
-[[deps.XGBoost_jll]]
-deps = ["Artifacts", "CUDA_Runtime_jll", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "1c0aa2390a7ebb28a3d6c214f64e57a24091fbd7"
-uuid = "a5c6f535-4255-5ca2-a466-0e519f119c46"
-version = "2.0.1+0"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
@@ -2055,7 +2328,7 @@ version = "0.15.2+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.11.0+0"
+version = "5.8.0+1"
 
 [[deps.libdecor_jll]]
 deps = ["Artifacts", "Dbus_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pango_jll", "Wayland_jll", "xkbcommon_jll"]
@@ -2102,7 +2375,7 @@ version = "1.1.6+0"
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.59.0+0"
+version = "1.52.0+1"
 
 [[deps.oneTBB_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2135,21 +2408,75 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╠═1e4c28f0-8a4c-11ef-04ab-870b23181d95
-# ╠═637469c7-8376-4afd-8ad2-03c905427d27
-# ╠═13ad5ad8-ff8b-4475-81bb-15495a3d82b7
-# ╠═7f0e341e-a57f-41bd-a3b9-b4092b358681
-# ╠═18fea5f8-96c3-47d0-a419-9dde383f6da7
-# ╠═a2c65abd-dde1-44de-8a72-7a54260a3d0f
-# ╠═195f6b62-52b4-43ca-bc7f-de67de308930
-# ╠═b4f0d078-c4b0-47d4-90ea-e7afcf42e49d
-# ╠═43c95cc2-2005-4859-a492-cc17186d01ee
-# ╠═c50c0305-7e74-4bd9-a29b-f5cfd2230dde
-# ╠═a37233f8-8595-4dc8-baa0-e0cadc76df46
-# ╟─fd25a3ec-7b07-4698-8e4a-8cb636161c55
-# ╠═ebaf09d6-90d5-40fb-8268-221c1196976f
-# ╠═df81136f-2f9c-4037-9d28-1efa9c0fc3b6
-# ╠═048f7e63-0d32-4d07-a7aa-20be6ad609c5
-# ╠═d3d409db-27a1-410a-97f6-fa5229fa5e85
+# ╠═f75fa5da-cca1-400f-8d2b-0c88c5f20c6e
+# ╠═c10fb950-84cd-11ef-2b27-e7f80c61964d
+# ╠═5034f5fc-0328-40b6-aa24-176ad10d6370
+# ╠═6f3ecc26-8800-41ee-ad24-d4e6bb9a2ed9
+# ╠═89e80d11-27d9-4461-ba54-9e8468eedeb7
+# ╠═fa61bef0-b252-45a2-96d4-1a74c49c1002
+# ╠═958061a3-eaf2-4da5-b60d-bd9fb6d53fb4
+# ╠═1639c470-1204-4682-9f1e-df6b66e4e242
+# ╟─5c9dd70e-5124-45c9-826b-7b97d3b72ca7
+# ╠═b70ab936-f767-49ce-95e4-32e8da8b2686
+# ╠═ca1f1fd8-345b-4157-9d6a-96921cb0d06f
+# ╠═4bee6d6a-7195-4ff9-8a7a-93e8f15d3ea6
+# ╟─41dfa78e-7538-4f78-bfb6-10772a1345d4
+# ╠═43d7fa91-1384-4831-a91f-58b03dc251ba
+# ╠═00d8a634-b538-4c94-bf3d-38e5889d51b8
+# ╟─5561756d-9b2b-4253-9004-cbcc191c4044
+# ╠═4991da63-0a38-4f80-832a-dbb3a889a8a1
+# ╠═1b1f1805-7490-406c-84da-94d72da992ef
+# ╟─e799a120-be6e-4226-9c50-a84f7662cf5a
+# ╠═beedb402-eca8-43b4-b021-d3a71683f05b
+# ╟─08bd5327-4420-4cf0-823c-0d798e72a131
+# ╠═207227eb-05db-49cd-aec6-31acd0b7a2fd
+# ╠═26652084-e92a-474c-8ebc-f9a9ec0721e9
+# ╠═57523371-064e-4e83-ab7e-bf42cbe60958
+# ╟─cf727bb8-aa88-4c7d-96b1-cc5cc02e1409
+# ╠═8dbaa1c5-9658-4aa9-b222-5af661172372
+# ╟─1292febd-094b-413a-8767-d8b142f57a46
+# ╠═e965bc04-945b-4e05-9465-91670406e5bd
+# ╠═c3d13c29-569c-4938-9c6a-5a538fe57d3a
+# ╠═4be1ed23-02e8-4adc-8699-383db459a295
+# ╟─0534d806-4f2f-4db5-b6cf-5ca32f844f83
+# ╠═a0a34df2-0653-4a3b-8f69-aa15a959b4ad
+# ╟─5772d55b-f25f-4e66-abdc-2340b6189863
+# ╠═36f403b0-f576-4868-9b5d-8855bf3e4c90
+# ╠═a46ebf53-196d-4043-bd71-32dad9e098c2
+# ╠═9de2c271-4e4c-4287-8c7f-e9643799db33
+# ╠═11f4e589-6122-473a-b4df-790abd5eb0c6
+# ╟─f9479004-8352-4a99-8e55-37e63d56b898
+# ╟─738b39e7-d429-458c-b843-2de6358046f2
+# ╠═41883cf3-e8f9-4192-9d65-0b3410d96e0b
+# ╠═6bc31402-4be2-4810-aacd-c3a6fd53d69f
+# ╠═15934c79-9379-41e3-94c2-76275779e560
+# ╠═20057c27-6120-4a56-a316-b29dfcb776a4
+# ╠═a22e901e-d71f-47f9-89b3-69c786c977e1
+# ╟─5640eb69-ac29-4de0-b3e8-5ba504bda87f
+# ╠═5b2b4a34-e4c4-41d4-8720-2afa9480765f
+# ╠═eda5fb91-5669-4a31-bfce-0335842f6df6
+# ╠═77e159d5-1f79-4e04-b067-b53eb2583ed7
+# ╠═1d6bb089-6f64-4777-9922-be3ff8a01af8
+# ╠═6b9b0b30-d17a-4cd2-9422-65345f4aecc6
+# ╠═679c5217-0270-4630-bfe1-6cd556945deb
+# ╠═23a37e56-a44b-4fec-b90b-5db40aa582aa
+# ╠═b996450c-0407-48ae-982e-782c1fc796da
+# ╠═ca1e599d-b173-478f-9fb7-6ce080f0ee19
+# ╠═586e952a-e3f0-46b9-b239-8d1d7a785835
+# ╠═01eb6f8d-2787-47ff-b6c8-ccc4e7ebd3e4
+# ╠═1c99b55f-d6b4-45af-bdd4-468423f33c8d
+# ╠═a19d0448-baee-4a28-8f9f-3c20028e62d0
+# ╠═7baae015-6314-4ee2-b716-cc24273a7c39
+# ╠═9e9f39b8-2202-46ff-bab7-666f803caf7f
+# ╟─1cd26f66-cbf9-4006-8ae6-4851adb8c08d
+# ╠═7a48a728-9bad-4838-93a4-7c7ecedf4521
+# ╟─f47372b8-d515-4f65-93e6-7a8eaa5d5902
+# ╠═c5521565-8e7a-4204-896c-cefb9685eb7d
+# ╠═7853c94f-60ff-4e09-98ad-8e6468c73cf0
+# ╠═cae4dfc3-0b1c-4cd2-94d9-02dc1fe73553
+# ╟─0f241ad4-7b04-4999-bd01-d67898d474d4
+# ╟─eec3e5b2-ec1c-45c2-b84f-6fd56fe6f73c
+# ╠═f990ad86-7ad9-4f19-beb3-7fed28765166
+# ╠═b004f4d1-c28c-4df5-941f-e66d190fb37e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
