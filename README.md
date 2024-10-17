@@ -1,7 +1,6 @@
 # Heart Disease - INFO 411 Assignment Two
 
-## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we have serialized our models and are then loading them back up again for use in the dashboard and Julia broke serialization with a minor version update(!?)
-
+## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we importing out machines from a serialized format. Julia completly broke the way it does serialization in a minor version update (?!)
 
 ## Running Project
 Run these commands in this order:
@@ -15,7 +14,7 @@ using Pluto;Pluto.run()
 ```
 
 ## Dashboard
-- To view go to `http://localhost:1234/edit?id=a1fc6274-8b81-11ef-04cd-f70530cab4ec&isolated_cell_id=9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a`
+- To view go to `http://localhost:1234/edit?id=495cabc2-8cd2-11ef-1f78-fd2accced723&isolated_cell_id=9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a`
 
 ## Navigation
 
