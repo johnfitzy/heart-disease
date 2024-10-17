@@ -94,7 +94,7 @@ end
 begin
 	
 # Create a dictionary to map names to DataFrames
-files_dict = Dict(
+lg_files_dict = Dict(
 "DS1 Heart Dataset - heart.csv" => df_ds1,
 "DS2 Imputed Hungarian Dataset - imputed.processed.hungarian.csv" => df_hung,
 "DS2 Imputed Cleveland Dataset - imputed.processed.cleveland.csv" => df_clev,
@@ -104,7 +104,7 @@ files_dict = Dict(
 )
 
 # Create a dictionary to map names to models
-machine_dict = Dict(
+lg_machine_dict = Dict(
     "Model trained on DS1" => lg_ds1_mach,
 	"Model trained on DS2 Cleveland" => lg_clev_ds2_mach,
     "Model trained on DS2 Hungarian" => lg_hung_ds2_mach,
@@ -115,15 +115,15 @@ machine_dict = Dict(
 end
 
 # ╔═╡ d1a09c15-3d41-4313-823b-76c4f39473d8
-machine_name = @bind selected_machine_name Select(collect(keys(machine_dict)))
+lg_machine_name = @bind lg_selected_machine_name Select(collect(keys(lg_machine_dict)))
 
 # ╔═╡ c0a5ec18-e9fe-4f25-b4ce-092470c3d197
-file_name = @bind selected_file_name Select(collect(keys(files_dict)))
+lg_file_name = @bind lg_selected_file_name Select(collect(keys(lg_files_dict)))
 
 # ╔═╡ 76f27e4b-198a-4f07-b4da-1e3857c2e7ea
 begin
-	df = files_dict[selected_file_name]
-	mach = machine_dict[selected_machine_name]
+	lg_df = lg_files_dict[lg_selected_file_name]
+	lg_mach = lg_machine_dict[lg_selected_machine_name]
 end
 
 # ╔═╡ f8159ada-3762-4177-8858-f905ea36b6ff
@@ -136,37 +136,37 @@ md"""
 begin
 
 	# function run_model(df, mach) 
-	X, y = coerce_features_and_target_to_scitypes(df)
+	X, y = coerce_features_and_target_to_scitypes(lg_df)
 
 	# Probabilities generated
-	y_prob = MLJ.predict(mach, X)
+	lg_y_prob = MLJ.predict(lg_mach, X)
 
 	# Predictions/classes 
-	y_pred = MLJ.predict_mode(mach, X)
+	lg_y_pred = MLJ.predict_mode(lg_mach, X)
 end
 
 # ╔═╡ 64d2a229-dad0-4092-bd48-bd5db34e06c7
 # Extract metric for later use
 begin 
-	cm = ConfusionMatrix()(y_pred, y)
+	lg_cm = ConfusionMatrix()(lg_y_pred, y)
 
-	matrix_values = ConfusionMatrices.matrix(cm)
+	lg_matrix_values = ConfusionMatrices.matrix(lg_cm)
 
 	# Extract TP, FP, TN, FN
-	TP = matrix_values[1, 1]  # True Positives
-	FP = matrix_values[2, 1]  # False Positives
-	TN = matrix_values[2, 2]  # True Negatives
-	FN = matrix_values[1, 2]  # False Negatives
+	lg_TP = lg_matrix_values[1, 1]  # True Positives
+	lg_FP = lg_matrix_values[2, 1]  # False Positives
+	lg_TN = lg_matrix_values[2, 2]  # True Negatives
+	lg_FN = lg_matrix_values[1, 2]  # False Negatives
 	
-	accuracy = "$(round(MLJ.accuracy(y_pred, y), sigdigits=4))"
-	auc = "$(round(MLJ.auc(y_prob, y), sigdigits=4))"
+	lg_accuracy = "$(round(MLJ.accuracy(lg_y_pred, y), sigdigits=4))"
+	lg_auc = "$(round(MLJ.auc(lg_y_prob, y), sigdigits=4))"
 end
 
 # ╔═╡ 252f0baf-af32-4296-bf11-153aed4b069b
 begin
-	fprs, tprs, thresholds = roc_curve(y_prob, y)
+	lg_fprs, lg_tprs, lg_thresholds = roc_curve(lg_y_prob, y)
 
-	roc_plot = plot(fprs, tprs, 
+	lg_roc_plot = plot(lg_fprs, lg_tprs, 
 		label="Logistic Classifier", 
 		xlabel="False Positive Rate", 
 		ylabel="True Positive Rate"
@@ -176,8 +176,22 @@ end
 
 # ╔═╡ 8f37976b-4951-4e02-b5e3-f19f8d082c1f
 md"""
-## XBoost
+## Random Forest Ensemble
 """
+
+# ╔═╡ 11ff1cc7-12c4-45bb-996a-a368d9750d01
+begin 
+
+	# Probabilities generated
+	# y_prob = MLJ.predict(mach, X)
+
+	# # Predictions/classes 
+	# y_pred = MLJ.predict_mode(mach, X)
+
+
+
+
+end
 
 # ╔═╡ 9cc84512-c258-48d4-975c-1359380d497b
 # Html here
@@ -189,55 +203,55 @@ title_html = @htl("""
 <h2>1) Compare Logistic Regression Model Performance Across Datasets</h2><br>
 """)
 
-log_model_select_html = @htl("""
+lg_model_select_html = @htl("""
 	<h3>Model and Dataset Selection</h3><br>
 	<div style="display: flex; flex-direction: column; gap: 10px;">
     	<div>
     <label for="model-select" style="margin-right: 10px;">Select Model:</label>
-        $machine_name
+        $lg_machine_name
     </div>
     <div>
         <label for="file-select" style="margin-right: 10px;">Select File:</label>
-        $file_name
+        $lg_file_name
     </div>
 </div><br>
 """)
 	
 # Manually create the confusion matrix table in HTML
-log_confusion_matrix_html = @htl("""
+lg_confusion_matrix_html = @htl("""
 <table border="1">
   <tr>
     <th> </th><th>Predicted 0</th><th>Predicted 1</th>
   </tr>
   <tr>
-    <td>Actual 0</td><td>$TP</td><td>$FN</td>
+    <td>Actual 0</td><td>$lg_TP</td><td>$lg_FN</td>
   </tr>
   <tr>
-    <td>Actual 1</td><td>$FP</td><td>$TN</td>
+    <td>Actual 1</td><td>$lg_FP</td><td>$lg_TN</td>
   </tr>
 </table>
 """)
 
 # Combine everything into an HTML block
-log_roc_out_html = @htl("""
+lg_roc_out_html = @htl("""
 <div>
     <h3>Confusion Matrix</h3>
-    $log_confusion_matrix_html  <!-- Embed the table here -->
+    $lg_confusion_matrix_html  <!-- Embed the table here -->
     <ul>
-        <li>Model accuracy: $accuracy</li>
-        <li>AUC: $auc</li>
+        <li>Model accuracy: $lg_accuracy</li>
+        <li>AUC: $lg_auc</li>
     </ul>
 </div><br>
 """)
 	
 # Wrap the plot in some HTML for display
-roc_html = @htl("""
+lg_roc_html = @htl("""
     <div>
         <h3>ROC Curve Analysis</h3><br>
-        <p><strong>Selected Model:</strong> $selected_machine_name</p>
-        <p><strong>Selected Dataset:</strong> $selected_file_name</p>
+        <p><strong>Selected Model:</strong> $lg_selected_machine_name</p>
+        <p><strong>Selected Dataset:</strong> $lg_selected_file_name</p>
         <div>
-            $roc_plot
+            $lg_roc_plot
         </div>
     </div>
 """)
@@ -250,9 +264,9 @@ subtitle_xboost_html = @htl("""
 final_html = @htl("""
 <div style="max-width: 800px; margin: auto;">
     $title_html
-    $log_model_select_html
-    $log_roc_out_html
-    $roc_html
+    $lg_model_select_html
+    $lg_roc_out_html
+    $lg_roc_html
 	$subtitle_xboost_html
 </div>
 """)
@@ -298,7 +312,8 @@ dash_final_url="http://localhost:1234/edit?" * "id=$notebook&" * join(["isolated
 # ╠═7c780262-31c1-4176-8ecc-a9abf9ca0bc4
 # ╠═64d2a229-dad0-4092-bd48-bd5db34e06c7
 # ╠═252f0baf-af32-4296-bf11-153aed4b069b
-# ╟─8f37976b-4951-4e02-b5e3-f19f8d082c1f
+# ╠═8f37976b-4951-4e02-b5e3-f19f8d082c1f
+# ╠═11ff1cc7-12c4-45bb-996a-a368d9750d01
 # ╠═9cc84512-c258-48d4-975c-1359380d497b
 # ╠═9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
 # ╠═cdc8655f-cb7e-4ecb-bac7-a8cab8a85748
