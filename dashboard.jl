@@ -4,6 +4,16 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 5628a140-b0bf-4bf9-b042-f753c45967d9
 begin
 using Pkg
@@ -30,7 +40,7 @@ df_hung = CSV.read("data/DS2_imputed/imputed.processed.hungarian.csv", DataFrame
 	
 df_clev = CSV.read("data/DS2_imputed/imputed.processed.cleveland.csv", DataFrame)
 
-df_lb = CSV.read("data/DS2_imputed/imputed.processed.long_beach.csv", DataFrame)
+df_lng_beach = CSV.read("data/DS2_imputed/imputed.processed.long_beach.csv", DataFrame)
 
 df_swiss = CSV.read("data/DS2_imputed/imputed.processed.swiss.csv", DataFrame)
 	
@@ -43,104 +53,85 @@ end
 begin
 
 
-# Model trained on DS1
-# lg_ds1_mach = machine("models/Logistic_Classifier_DS1_Model.jls")
+## --- Load Logistic Regression Machines --- ##
+lg_ds1_mach = machine("models/Logistic_Classifier_DS1_Model.jls")
 
-# # Model trained on DS2 imputed Hungarian dataset
-# lg_clev_mach = machine("models/Logistic_Classifier_DS2_Cleveland_Model.jls")
+lg_clev_ds2_mach = machine("models/Logistic_Classifier_DS2_Cleveland_Model.jls")
 
-# lg_hungarian_mach = machine("models/Logistic_Classifier_DS2_Hungarian_Model.jls")
+lg_hung_ds2_mach = machine("models/Logistic_Classifier_DS2_Hungarian_Model.jls")
 
-# lg_lb_mach = machine("models/Logistic_Classifier_DS2_Cleveland_Model.jls")
+lg_lb_ds2_mach = machine("models/Logistic_Classifier_DS2_Long_Beach_Model.jls")
 
-lg_swiss_mach = machine("models/Logistic_Classifier_DS2_Swiss_Model.jls")
-
-	
-# Model trained on DS1 with Random Forest
-rf_ds1_mach = machine("models/RF_Classifier_DS1_Model.jls")
-	
-
-# # Random Forest Ensemble model trained on DS2 Cleveland dataset
-# rf_ensemble_ds2_cleveland_mach = machine("models/RF_Ensemble_DS2_Cleveland_model")
-
-# # Random Forest Ensemble model trained on DS2 Hungarian dataset
-# rf_ensemble_ds2_hungarian_mach = machine("models/RF_Ensemble_DS2_Hungarian_model")
-
-# # XGBoost model trained on DS1
-# xgboost_ds1_mach = machine("models/XGBoost_Classifier_DS1_Model.jls")
-
-# # XGBoost model trained on DS2 Cleveland dataset
-# xgboost_ds2_cleveland_mach = machine("models/XGBoost_DS2_Cleveland_Model")
-
-# # XGBoost model trained on DS2 Hungarian dataset
-# xgboost_ds2_hungarian_mach = machine("models/XGBoost_DS2_Hungarian_Model")
-
-# # XGBoost model trained on DS2 Long Beach dataset
-# xgboost_ds2_longbeach_mach = machine("models/XGBoost_DS2_LongBeach_Model")
-
-# # XGBoost model trained on DS2 Swiss dataset
-# xgboost_ds2_swiss_mach = machine("models/XGBoost_DS2_Swiss_Model")
-
+lg_swiss_ds2_mach = machine("models/Logistic_Classifier_DS2_Swiss_Model.jls")
 
 	
+
+## --- Load Random Forest Ensemble Classifier Machines --- ##
+rf_ensemble_ds1_mach = machine("models/RF_Ensemble_DS1_Model.jls")
+	
+rf_ensemble_ds2_clev_mach = machine("models/RF_Ensemble_DS2_Cleveland_model.jls")
+
+rf_ensemble_ds2_hung_mach = machine("models/RF_Ensemble_DS2_Hungarian_model.jls")
+
+rf_ensemble_ds2_lb_mach = machine("models/RF_Ensemble_DS2_Longbeach_Model.jls")
+
+rf_ensemble_ds2_swiss_mach = machine("models/RF_Ensemble_DS2_Swiss_model.jls")
+
+## --- Load XGBoost Classifier Machines --- ##
+xgboost_ds1_mach = machine("models/XGBoost_Classifier_DS1_Model.jls")
+
+xgboost_ds2_clev_mach = machine("models/XGBoost_Classifier_DS2_Cleveland_Model.jls")
+
+xgboost_ds2_hung_mach = machine("models/XGBoost_Classifer_DS2_Hungarian.jl")
+
+xgboost_ds2_lb_mach = machine("models/XGBoost_Classifier_DS2_LongBeach_Model.jls")
+
+xgboost_ds2_swiss_mach = machine("models/XGBoost_Classifier_DS2_Swiss_Model.jls")
 
 end
 
 # ╔═╡ e920d7ba-911e-47cd-8457-417eee2ebda0
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	
 # Create a dictionary to map names to DataFrames
 files_dict = Dict(
-    "DS1 Heart Dataset - heart.csv" => df_ds1,
-    "DS2 Imputed Hungarian Dataset - imputed.processed.hungarian.csv" => df_hung,
-	"DS2 Imputed Cleveland Dataset - imputed.processed.cleveland.csv" => df_clev,
-	"DS2 Imputed Long Beach Dataset - imputed.processed.long_beach.csv" => df_lb,	"DS2 Imputed Switzerland Dataset - imputed.processed.swiss.csv" => df_swiss,
+"DS1 Heart Dataset - heart.csv" => df_ds1,
+"DS2 Imputed Hungarian Dataset - imputed.processed.hungarian.csv" => df_hung,
+"DS2 Imputed Cleveland Dataset - imputed.processed.cleveland.csv" => df_clev,
+"DS2 Imputed Long Beach Dataset - imputed.processed.long_beach.csv" => df_lng_beach,	
+	"DS2 Imputed Switzerland Dataset - imputed.processed.swiss.csv" => df_swiss,
     "Combined Datasets - combined_datasets.csv" => df_all
 )
 
 # Create a dictionary to map names to models
 machine_dict = Dict(
     "Model trained on DS1" => lg_ds1_mach,
-    "Model trained on Hungarian DS2" => lg_hungarian_mach
+	"Model trained on DS2 Cleveland" => lg_clev_ds2_mach,
+    "Model trained on DS2 Hungarian" => lg_hung_ds2_mach,
+	"Model trained on DS2 Long Beach" => lg_lb_ds2_mach,
+	"Model trained on DS2 Switzerland" => lg_swiss_ds2_mach
 )
 
 end
-  ╠═╡ =#
 
 # ╔═╡ d1a09c15-3d41-4313-823b-76c4f39473d8
-# ╠═╡ disabled = true
-#=╠═╡
 machine_name = @bind selected_machine_name Select(collect(keys(machine_dict)))
-  ╠═╡ =#
 
 # ╔═╡ c0a5ec18-e9fe-4f25-b4ce-092470c3d197
-# ╠═╡ disabled = true
-#=╠═╡
 file_name = @bind selected_file_name Select(collect(keys(files_dict)))
-  ╠═╡ =#
 
 # ╔═╡ 76f27e4b-198a-4f07-b4da-1e3857c2e7ea
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	df = files_dict[selected_file_name]
 	mach = machine_dict[selected_machine_name]
 end
-  ╠═╡ =#
 
 # ╔═╡ f8159ada-3762-4177-8858-f905ea36b6ff
-# ╠═╡ disabled = true
-#=╠═╡
 md"""
 ## Logistic Regression
 """
-  ╠═╡ =#
 
 # ╔═╡ 7c780262-31c1-4176-8ecc-a9abf9ca0bc4
-# ╠═╡ disabled = true
-#=╠═╡
 # Running the Logistic Regression Machine
 begin
 
@@ -148,16 +139,13 @@ begin
 	X, y = coerce_features_and_target_to_scitypes(df)
 
 	# Probabilities generated
-	y_prob = predict(mach, X)
+	y_prob = MLJ.predict(mach, X)
 
 	# Predictions/classes 
-	y_pred = predict_mode(mach, X)
+	y_pred = MLJ.predict_mode(mach, X)
 end
-  ╠═╡ =#
 
 # ╔═╡ 64d2a229-dad0-4092-bd48-bd5db34e06c7
-# ╠═╡ disabled = true
-#=╠═╡
 # Extract metric for later use
 begin 
 	cm = ConfusionMatrix()(y_pred, y)
@@ -173,11 +161,8 @@ begin
 	accuracy = "$(round(MLJ.accuracy(y_pred, y), sigdigits=4))"
 	auc = "$(round(MLJ.auc(y_prob, y), sigdigits=4))"
 end
-  ╠═╡ =#
 
 # ╔═╡ 252f0baf-af32-4296-bf11-153aed4b069b
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	fprs, tprs, thresholds = roc_curve(y_prob, y)
 
@@ -188,7 +173,6 @@ begin
 	)
 
 end
-  ╠═╡ =#
 
 # ╔═╡ 8f37976b-4951-4e02-b5e3-f19f8d082c1f
 md"""
@@ -196,8 +180,6 @@ md"""
 """
 
 # ╔═╡ 9cc84512-c258-48d4-975c-1359380d497b
-# ╠═╡ disabled = true
-#=╠═╡
 # Html here
 
 begin
@@ -277,11 +259,8 @@ final_html = @htl("""
 
 
 end
-  ╠═╡ =#
 
 # ╔═╡ 9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a
-# ╠═╡ disabled = true
-#=╠═╡
 # Export HTML cell
 begin
 	
@@ -289,33 +268,20 @@ begin
 
 	layout = vbox([final_html])
 end
-  ╠═╡ =#
 
 # ╔═╡ cdc8655f-cb7e-4ecb-bac7-a8cab8a85748
-# ╠═╡ disabled = true
-#=╠═╡
 notebook = PlutoRunner.notebook_id[] |> string
-  ╠═╡ =#
 
 # ╔═╡ 7600a7f7-ecbc-4ac5-be5b-b1c7ece70446
-# ╠═╡ disabled = true
-#=╠═╡
 celllist=["9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a"]
-  ╠═╡ =#
 
 # ╔═╡ f3ef1c9e-241d-42fc-84e4-0645ec85cb1f
-# ╠═╡ disabled = true
-#=╠═╡
 dash_final_url="http://localhost:1234/edit?" * "id=$notebook&" * join(["isolated_cell_id=$cell" for cell in celllist], "&")
-  ╠═╡ =#
 
 # ╔═╡ 7c6db7cf-795c-43c1-bd7a-2f4f60c850e4
-# ╠═╡ disabled = true
-#=╠═╡
 @htl("""
 <a href="$dash_final_url" style="font_size=20">Click here for the Dashboard</a>
 """)
-  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═5628a140-b0bf-4bf9-b042-f753c45967d9

@@ -265,10 +265,14 @@ MLJ.fit!(t_mach, rows=train, verbosity=0)
 end
 
 # ╔═╡ 3ae9822c-58a7-4e6f-a39d-6d9e88e18d2f
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
 begin
 	using JLSO
 	MLJ.save("../../models/XGBoost_Classifier_DS2_Cleveland_Model.jls", t_mach)
 end
+  ╠═╡ =#
 
 # ╔═╡ 23a37e56-a44b-4fec-b90b-5db40aa582aa
 tutime=@timed begin

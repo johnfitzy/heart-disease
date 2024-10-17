@@ -314,10 +314,14 @@ MLJ.fit!(t_mach, rows=train, verbosity=0)
 end
 
 # ╔═╡ bcbe83ec-c636-4faf-a018-e3b3096931fe
+# ╠═╡ disabled = true
+# ╠═╡ skip_as_script = true
+#=╠═╡
 begin
 	using JLSO
 	MLJ.save("../../models/RF_Ensemble_DS1_Model.jls", t_mach)
 end
+  ╠═╡ =#
 
 # ╔═╡ 23a37e56-a44b-4fec-b90b-5db40aa582aa
 tutime=@timed begin
