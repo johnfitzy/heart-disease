@@ -409,9 +409,9 @@ end
 # ╔═╡ 1bfecd1f-87bc-42ab-b740-bc9c7e169125
 md"""
 ## Comment
-- Using `Impute.knn` imputation had a similar result to `Impute.interp` for features 1 - 10, ie the distributions are not significantly different
-- Note that we applied a ceiling funciton to round predicted missing numbers to keep the ranges numbers similar to the original data. Ie 1.0 instead of 1.03
-- When comparing this so the `DS1` dataset `thal` feature distribution it makes us think that using the `Impute.knn` method for a feature with such a large percentage of missing values (90.48%) is **not really that useful.** Because mostly it just adds 3's
+- Using `Impute.knn` imputation had a similar result to `Impute.interp` for features 1 - 10, ie the distributions are not significantly different.
+- Note that we applied a ceiling function to round predicted missing numbers to keep the ranges numbers similar to the original data. Ie 1.0 instead of 1.03
+- When comparing this so the `DS1` dataset `thal` feature distribution it makes us think that using the `Impute.knn` method for a feature with such a large percentage of missing values (90.48%) is **not really that useful.** Because mostly it just adds 3's.
 """
 
 # ╔═╡ 45c9c606-7659-433a-9f51-7b67d3cb104d
@@ -420,8 +420,8 @@ md"""
 ### Why?
 
 - Random Forests are robust and can handle both categorical and continuous data, making them well-suited for datasets with a mix of variable types. 
-- We are making the assumption that the missing values are MAR
-- RG is capable of capturing complex interactions between variables, which is useful for MAR data. 
+- We are making the assumption that the missing values are missing at random(MAR).
+- Random Forest is capable of capturing complex interactions between variables, which is useful for MAR data. 
 """
 
 # ╔═╡ 08631dbc-012e-4c43-b939-29655cd4962b
@@ -511,9 +511,9 @@ end
 # ╔═╡ e49c59f7-1cdf-4838-8a5a-374505660a81
 md"""
 # Comment
-- We decided to proceed with the RandomForest approach, mostly because we believe the missing data is probably MAR and that out of the two other methods RandomForest is best suited for that. 
+- We decided to proceed with the Random Forest approach, mostly because we believe the missing data is probably MAR and that out of the two other methods Random Forest is best suited for that. 
 
-## NOTE: we actually think that the features with over 90% plus of the data missing are probably useless but made the decision to proceed with using them and, if we have time perhaps revist removing them. Some of the algorthims used may implicitly remove the importance of these features anyway. We feel like figuring out what is the best imputation method and how that effects downstream algorithm performance is a large topic in itself(?)
+#### NOTE: We actually think that the features with over 90% plus of the data missing are probably useless but made the decision to proceed with using them and, if we have time perhaps revisit removing them. Some of the algorthims used may implicitly remove the importance of these features. In another context, we believe this could be an area of interest to explore the downstream algorithm performance of imputation methods.
 
 """
 
@@ -611,7 +611,7 @@ end
 
 # ╔═╡ 772d1cff-a81c-4447-a7e0-912ee4a94483
 md"""
-# The end
+# The End
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2678,7 +2678,7 @@ version = "1.4.1+1"
 # ╠═fa942a9a-0f7e-4b15-9291-6735d5a6d086
 # ╠═db12b687-abe3-4cbd-b1fa-2b62d4f4387b
 # ╠═d9ada856-da01-42ad-a5be-a835302f809e
-# ╠═1bfecd1f-87bc-42ab-b740-bc9c7e169125
+# ╟─1bfecd1f-87bc-42ab-b740-bc9c7e169125
 # ╟─45c9c606-7659-433a-9f51-7b67d3cb104d
 # ╠═08631dbc-012e-4c43-b939-29655cd4962b
 # ╠═969944e0-4570-4512-aa79-deaa31714ffa
