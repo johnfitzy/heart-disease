@@ -1,6 +1,6 @@
 # Heart Disease - INFO 411 Assignment Two
 
-## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we importing out machines from a serialized format. Julia completly broke the way it does serialization in a minor version update (?!)
+## NOTE: You will probably require Julia version 1.11.0 to run the the dashboard because we importing out machines from a serialized format. Julia completely broke the way it does serialization in a minor version update (?!)
 
 ## Running Project
 Run these commands in this order:
