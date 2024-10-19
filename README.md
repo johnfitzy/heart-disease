@@ -14,7 +14,7 @@ using Pluto;Pluto.run()
 ```
 
 ## Dashboard
-- To view go to `http://localhost:1234/edit?id=495cabc2-8cd2-11ef-1f78-fd2accced723&isolated_cell_id=9a9ffaf6-43ca-4eda-9b31-7fc658dd4f9a`
+- To view click on the link `Click here for the Dashboard` at the bottom of the dashboard.jl notebook.
 
 ## Navigation
 
